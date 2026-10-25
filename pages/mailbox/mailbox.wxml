@@ -1,0 +1,56 @@
+<view class="safe-page" wx:if="{{mailbox}}">
+  <view class="card header">
+    <view class="stamp">邮戳 #{{mailbox.code}}</view>
+    <view class="title">{{mailbox.title}}</view>
+    <view class="muted">{{mailbox.intro}}</view>
+    <view class="muted" wx:if="{{mailbox.topic}}">今日主题：{{mailbox.topic}}</view>
+    <view class="owner muted">主人：{{mailbox.ownerName}}</view>
+    <button class="btn-ghost share-btn" open-type="share">把这只信箱发给朋友</button>
+  </view>
+
+  <view class="card composer" wx:if="{{!isOwner}}">
+    <view class="paused" wx:if="{{mailbox.paused}}">主人暂时关上了信箱。</view>
+    <block wx:else>
+      <view class="mode">
+        <view class="mode-item {{isAnonymous ? 'on' : ''}}" bindtap="setAnon">匿名提问</view>
+        <view class="mode-item {{!isAnonymous ? 'on named' : ''}}" bindtap="setNamed">署名提问</view>
+      </view>
+      <view class="muted tiny">默认匿名。只有你主动选择署名，对方才看得到你的昵称。</view>
+      <view class="prompt" bindtap="usePrompt">用这句：{{prompt}}</view>
+      <view class="muted tiny" bindtap="shufflePrompt">换一句</view>
+      <textarea
+        class="area"
+        maxlength="500"
+        placeholder="{{isAnonymous ? '写下一句匿名的话…' : '以你的昵称发送…'}}"
+        value="{{content}}"
+        bindinput="onContent"
+      />
+      <view class="btn-primary" bindtap="send">{{isAnonymous ? '匿名发送' : '署名发送'}}</view>
+      <view class="btn-ghost follow" bindtap="follow">看这位朋友的公开问答</view>
+    </block>
+  </view>
+
+  <view class="card owner-tip" wx:else>
+    <view>来信请到「收件箱」回复。公开到信箱墙的问答会出现在下方。</view>
+    <view class="btn-ghost" bindtap="togglePause">{{mailbox.paused ? '重新打开信箱' : '暂停接收来信'}}</view>
+    <view class="mute-row">
+      <input class="mute-input" placeholder="屏蔽词，例如：成绩" value="{{muteInput}}" bindinput="onMute" />
+      <view class="mute-add" bindtap="addMute">添加</view>
+    </view>
+    <view class="muted tiny" wx:if="{{mailbox.mutedWords.length}}">已屏蔽：{{mailbox.mutedWords}}</view>
+  </view>
+
+  <view class="section-title">{{isOwner ? '信箱墙' : '已公开的问答'}}</view>
+  <view class="empty" wx:if="{{!messages.length}}">还没有公开内容</view>
+  <view class="card msg" wx:for="{{messages}}" wx:key="id" data-id="{{item.id}}" bindtap="openThread">
+    <view class="msg-top">
+      <view class="tag {{item.isAnonymous ? 'tag-anon' : 'tag-named'}}">{{item.isAnonymous ? '匿名' : '署名'}}</view>
+      <view class="muted tiny">{{item.timeText}}</view>
+    </view>
+    <view class="q">{{item.content}}</view>
+    <view class="reply" wx:if="{{item.reply}}">
+      <view class="muted tiny">信箱主人回复</view>
+      <view>{{item.reply.content}}</view>
+    </view>
+  </view>
+</view>

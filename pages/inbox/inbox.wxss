@@ -1,0 +1,76 @@
+.pause-bar {
+  text-align: center;
+  color: #a33b2b;
+  font-size: 24rpx;
+  margin-bottom: 16rpx;
+}
+
+.tabs {
+  display: flex;
+  background: #efe6d6;
+  border-radius: 20rpx;
+  padding: 6rpx;
+  margin-bottom: 24rpx;
+}
+
+.tab {
+  flex: 1;
+  height: 72rpx;
+  line-height: 72rpx;
+  text-align: center;
+  border-radius: 16rpx;
+  color: #8a8174;
+  font-weight: 600;
+  font-size: 24rpx;
+}
+
+.tab.on {
+  background: #fffbf4;
+  color: #2c2416;
+}
+
+.item {
+  margin-bottom: 16rpx;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 12rpx;
+}
+
+.to {
+  font-weight: 600;
+  flex: 1;
+}
+
+.status {
+  font-size: 22rpx;
+  color: #a33b2b;
+}
+
+.status.done {
+  color: #4b7a5d;
+}
+
+.content {
+  font-size: 30rpx;
+}
+
+.tiny {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+}
+
+.reply {
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #efe6d6;
+}
+
+.mini {
+  width: 280rpx;
+  margin: 28rpx auto 0;
+}

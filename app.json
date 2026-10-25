@@ -1,0 +1,43 @@
+{
+  "pages": [
+    "pages/login/login",
+    "pages/home/home",
+    "pages/inbox/inbox",
+    "pages/everyone/everyone",
+    "pages/mailbox/mailbox",
+    "pages/create/create",
+    "pages/detail/detail",
+    "pages/legal/legal"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#F7F1E8",
+    "navigationBarTitleText": "匿名问答箱",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F7F1E8",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#8A8174",
+    "selectedColor": "#A33B2B",
+    "backgroundColor": "#FFFBF4",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/inbox/inbox",
+        "text": "收件箱"
+      },
+      {
+        "pagePath": "pages/everyone/everyone",
+        "text": "Everyone"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

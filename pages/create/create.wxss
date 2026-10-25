@@ -1,0 +1,26 @@
+.lead {
+  color: #8a8174;
+  margin: 8rpx 8rpx 24rpx;
+}
+
+.label {
+  font-weight: 600;
+  margin: 8rpx 0 12rpx;
+}
+
+.field,
+.area {
+  width: 100%;
+  background: #f7f1e8;
+  border-radius: 20rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 24rpx;
+}
+
+.area {
+  height: 180rpx;
+}
+
+.btn-primary {
+  margin-top: 32rpx;
+}

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>匿名问答箱 · 预览</title>
+  <style>
+    :root { --ink:#2c2416; --muted:#8a8174; --bg:#f7f1e8; --card:#fffbf4; --accent:#a33b2b; --anon:#5b6e8c; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #e8dfd2; color: var(--ink); }
+    .phone { width: min(420px, 100%); min-height: 100vh; margin: 0 auto; background: var(--bg); position: relative; padding-bottom: 96px; }
+    .bar { padding: 18px 20px 8px; font-weight: 700; }
+    .page { display: none; padding: 8px 16px 24px; }
+    .page.on { display: block; }
+    .card { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(163,59,43,.08); }
+    .muted { color: var(--muted); font-size: 13px; }
+    .btn { height: 44px; border: 0; border-radius: 999px; font-weight: 600; cursor: pointer; width: 100%; font-size: 15px; }
+    .primary { background: var(--accent); color: #fff; }
+    .ghost { background: #efe6d6; }
+    input, textarea { width: 100%; border: 0; background: #f7f1e8; border-radius: 12px; padding: 12px; font: inherit; }
+    textarea { min-height: 90px; resize: vertical; }
+    .tabs { position: fixed; left: 50%; transform: translateX(-50%); bottom: 12px; width: min(392px, calc(100% - 28px)); height: 64px; background: rgba(255,251,244,.96); border-radius: 22px; display: flex; border: 1px solid rgba(163,59,43,.08); }
+    .tabs button { flex: 1; border: 0; background: none; color: var(--muted); font-weight: 700; cursor: pointer; }
+    .tabs button.on { color: var(--accent); }
+    .mode { display: flex; gap: 8px; margin: 8px 0; }
+    .mode button { flex: 1; height: 36px; border: 0; border-radius: 10px; background: #f7f1e8; font-weight: 700; cursor: pointer; }
+    .mode button.on { background: var(--anon); color: #fff; }
+    .mode button.on.named { background: var(--accent); }
+    .tag { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; }
+    .tag-anon { background: #e8edf5; color: var(--anon); }
+    .tag-named { background: #f4e4df; color: var(--accent); }
+    .hi { font-size: 24px; font-weight: 800; }
+    .row { display: flex; gap: 8px; }
+    .row input { flex: 1; }
+    .search-btn { width: 72px; background: var(--accent); color: #fff; border: 0; border-radius: 12px; font-weight: 700; cursor: pointer; }
+    .stamp { display: inline-block; border: 1.5px solid var(--accent); color: var(--accent); font-weight: 800; font-size: 12px; padding: 2px 8px; border-radius: 4px; letter-spacing: 1px; }
+    .item { cursor: pointer; }
+    .empty { text-align: center; color: var(--muted); padding: 32px 8px; }
+    .seal { width: 52px; height: 52px; border-radius: 14px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; }
+    h3 { margin: 16px 4px 8px; font-size: 15px; }
+    .status { font-size: 12px; color: var(--accent); }
+    .status.done { color: #4b7a5d; }
+    .between { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .prompt { background: #f7f1e8; border-radius: 10px; padding: 10px 12px; color: var(--anon); cursor: pointer; margin: 8px 0; }
+    .modal { position: fixed; inset: 0; background: rgba(44,36,22,.45); display: none; align-items: center; justify-content: center; z-index: 20; padding: 24px; }
+    .modal.on { display: flex; }
+    .letter-card { width: 280px; background: #fffbf4; border: 1px solid rgba(163,59,43,.15); padding: 28px 22px; text-align: left; }
+    .letter-card h2 { margin: 12px 0 8px; font-size: 22px; }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div id="login" class="page on">
+      <div style="padding:48px 20px 0">
+        <div class="seal">匿</div>
+        <h1 style="margin:16px 0 8px">匿名问答箱</h1>
+        <p class="muted">信纸暖色。留言默认匿名。编号是邮戳，卡片才是入口。</p>
+        <div class="card"><input id="nick" placeholder="填写昵称（署名时才会显示）" /></div>
+        <button class="btn primary" onclick="login()">进入预览</button>
+      </div>
+    </div>
+
+    <div id="home" class="page">
+      <div class="bar">首页</div>
+      <div class="hi" id="hello"></div>
+      <p class="muted">把信箱卡片发给朋友。编号只是邮戳。</p>
+      <div id="mine"></div>
+      <div class="card">
+        <b>按编号查找</b>
+        <div class="row" style="margin-top:10px">
+          <input id="kw" type="number" placeholder="例如 1" />
+          <button class="search-btn" onclick="search()">查找</button>
+        </div>
+      </div>
+      <h3>最近发布的信箱</h3>
+      <div id="latest"></div>
+    </div>
+
+    <div id="inbox" class="page">
+      <div class="bar">收件箱</div>
+      <div id="pauseBar"></div>
+      <div class="mode">
+        <button class="on" id="t1" onclick="setInbox('unanswered')">未答</button>
+        <button id="t2" onclick="setInbox('answered')">已答</button>
+        <button id="t3" onclick="setInbox('sent')">我发出的</button>
+      </div>
+      <div id="inboxList"></div>
+    </div>
+
+    <div id="everyone" class="page">
+      <div class="bar">Everyone</div>
+      <div class="mode">
+        <button class="on" id="e1" onclick="setEvery('feed')">好友动态</button>
+        <button id="e2" onclick="setEvery('friends')">朋友的信箱</button>
+      </div>
+      <div id="everyBody"></div>
+    </div>
+
+    <div id="mailbox" class="page">
+      <div class="bar" onclick="show('home')" style="cursor:pointer">← 信箱</div>
+      <div id="boxBody"></div>
+    </div>
+
+    <div id="create" class="page">
+      <div class="bar" onclick="show('home')" style="cursor:pointer">← 发布信箱</div>
+      <p class="muted">编号按发布顺序生成，会出现在卡片邮戳上。</p>
+      <div class="card">
+        <input id="boxTitle" placeholder="信箱名称" />
+        <div style="height:8px"></div>
+        <textarea id="boxIntro">欢迎匿名提问。署名可选，但匿名是默认。</textarea>
+      </div>
+      <button class="btn primary" onclick="createBox()">发布并领取编号</button>
+    </div>
+
+    <div id="thread" class="page">
+      <div class="bar" onclick="show('inbox')" style="cursor:pointer">← 留言详情</div>
+      <div id="threadBody"></div>
+    </div>
+
+    <div class="tabs" id="tabbar" style="display:none">
+      <button class="on" onclick="tab('home', this)">首页</button>
+      <button onclick="tab('inbox', this)">收件箱</button>
+      <button onclick="tab('everyone', this)">Everyone</button>
+    </div>
+  </div>
+
+  <div class="modal" id="shareModal" onclick="if(event.target===this)this.classList.remove('on')">
+    <div class="letter-card" id="shareCard"></div>
+  </div>
+
+<script>
+const KEY = 'anonbox_preview_v2'
+const PROMPTS = ['今天过得怎么样？','有句一直没说出口的话？','最近在为什么事犹豫？','这周最想被问的一件事？','如果只能问一个问题，你会问自己什么？']
+const uid = (p) => p + '_' + Math.random().toString(36).slice(2,8)
+const now = () => Date.now()
+function blank() {
+  return { seq: 2, me: null, follows: [], users: [
+    { id:'demo_forest', nickname:'林间信箱', phone:'13800000001', mailboxCode:1, contacts:[] },
+    { id:'demo_night', nickname:'夜航者', phone:'13800000002', mailboxCode:2, contacts:[] }
+  ], mailboxes: [
+    { code:1, ownerId:'demo_forest', title:'林间信箱', intro:'把想说又不好意思说的话，放进这里。', messageCount:1, paused:false, mutedWords:[], topic:'最近有没有一直没说出口的话' },
+    { code:2, ownerId:'demo_night', title:'夜航者的提问箱', intro:'匿名提问、认真回复。', messageCount:1, paused:false, mutedWords:[], topic:'' }
+  ], messages: [
+    { id:'m1', mailboxCode:1, fromId:'demo_night', isAnonymous:true, content:'最近有没有一件事，你很想对谁说，却一直没开口？', createdAt: now()-86400000*2, archived:false, read:true, reply:{ content:'有。所以才做了这个信箱。', createdAt: now()-86400000, visibility:'mailbox' } },
+    { id:'m2', mailboxCode:2, fromId:'demo_forest', isAnonymous:true, content:'如果今天只能问一个问题，你会问自己什么？', createdAt: now()-86400000, archived:false, read:false, reply:null }
+  ] }
+}
+function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || blank() } catch(e){ return blank() } }
+function save(db){ localStorage.setItem(KEY, JSON.stringify(db)); return db }
+let db = load(); if (!db.seq) db = save(blank())
+let inboxTab = 'unanswered', everyTab = 'feed', boxAnon = true, hint = PROMPTS[0], vis = 'private'
+
+function me(){ return db.users.find(u => u.id === db.me) }
+function user(id){ return db.users.find(u => u.id === id) }
+function box(code){ return db.mailboxes.find(m => m.code === Number(code)) }
+function visLabel(v){ return { private:'仅对方可见', mailbox:'信箱墙', everyone:'好友动态' }[v] || '' }
+
+function show(id){
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('on'))
+  document.getElementById(id).classList.add('on')
+  document.getElementById('tabbar').style.display = ['home','inbox','everyone'].includes(id) ? 'flex' : 'none'
+  if (id==='home') renderHome()
+  if (id==='inbox') renderInbox()
+  if (id==='everyone') renderEvery()
+}
+function tab(id, btn){
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('on'))
+  btn.classList.add('on')
+  show(id)
+}
+function login(){
+  const nickname = document.getElementById('nick').value.trim() || '预览用户'
+  if (!me()) {
+    const u = { id: uid('u'), nickname, phone:'', mailboxCode:null, contacts:[] }
+    db.users.push(u); db.me = u.id; save(db)
+  }
+  show('home')
+  document.querySelectorAll('.tabs button')[0].classList.add('on')
+}
+function unread(){
+  const u = me(); if (!u || !u.mailboxCode) return 0
+  return db.messages.filter(m => m.mailboxCode===u.mailboxCode && !m.reply && !m.archived).length
+}
+function renderHome(){
+  const u = me()
+  document.getElementById('hello').textContent = '你好，' + (u ? u.nickname : '')
+  const mine = u && u.mailboxCode ? box(u.mailboxCode) : null
+  const n = unread()
+  document.getElementById('mine').innerHTML = mine ? `<div class="card">
+    <div class="stamp">邮戳 #${mine.code}</div>
+    <h2 style="margin:10px 0 6px">${mine.title}</h2>
+    <div class="muted">${mine.intro}</div>
+    <div class="muted">${mine.paused ? '已暂停接收来信' : (n ? '有 '+n+' 封还没看' : '')}</div>
+    <button class="btn primary" style="margin-top:12px" onclick="openShare(${mine.code})">分享我的信箱</button>
+    <button class="btn ghost" style="margin-top:8px" onclick="navigator.clipboard.writeText('${mine.code}');alert('已复制编号')">复制编号 ${mine.code}</button>
+    <div class="muted" style="margin-top:10px;color:var(--accent);font-weight:700;cursor:pointer" onclick="openBox(${mine.code})">打开我的信箱墙</div>
+  </div>` : `<div class="card"><b>还没有自己的信箱</b><p class="muted">发布后做成卡片发给微信好友。</p>
+    <button class="btn primary" onclick="show('create')">发布我的信箱</button></div>`
+  document.getElementById('latest').innerHTML = [...db.mailboxes].sort((a,b)=>b.code-a.code).map(m =>
+    `<div class="card item between" onclick="openBox(${m.code})"><div><div class="stamp">#${m.code}</div><b>${m.title}</b><div class="muted">${m.intro}</div></div><span style="color:var(--accent);font-weight:700">留言</span></div>`
+  ).join('')
+}
+function openShare(code){
+  const m = box(code)
+  document.getElementById('shareCard').innerHTML = `<div class="stamp">邮戳 #${m.code}</div><h2>${m.title}</h2><p class="muted">${m.intro}</p><p>来这里匿名提问。署名可选，匿名是默认。</p><p class="muted">截图发给微信好友即可。</p>`
+  document.getElementById('shareModal').classList.add('on')
+}
+function search(){
+  const n = Number(document.getElementById('kw').value)
+  if (!box(n)) return alert('没有找到这个信箱')
+  openBox(n)
+}
+function createBox(){
+  const u = me()
+  if (u.mailboxCode) return openBox(u.mailboxCode)
+  db.seq += 1
+  const m = { code: db.seq, ownerId: u.id, title: document.getElementById('boxTitle').value.trim() || (u.nickname+'的信箱'), intro: document.getElementById('boxIntro').value.trim(), messageCount:0, paused:false, mutedWords:[], topic:'' }
+  db.mailboxes.push(m); u.mailboxCode = m.code; save(db)
+  show('home'); openShare(m.code)
+}
+function shuffle(){ hint = PROMPTS[Math.floor(Math.random()*PROMPTS.length)] }
+function openBox(code){
+  const m = box(code), u = me(), owner = m.ownerId === u.id
+  const wall = db.messages.filter(x => x.mailboxCode===m.code && x.reply && !x.archived && (x.reply.visibility==='mailbox' || x.reply.visibility==='everyone'))
+  document.getElementById('boxBody').innerHTML = `
+    <div class="card"><div class="stamp">邮戳 #${m.code}</div><h2 style="margin:8px 0">${m.title}</h2>
+    <div class="muted">${m.intro}</div>${m.topic?`<div class="muted">今日主题：${m.topic}</div>`:''}
+    <button class="btn ghost" style="margin-top:10px" onclick="openShare(${m.code})">把这只信箱发给朋友</button></div>
+    ${owner ? `<div class="card">来信请到收件箱回复。
+      <button class="btn ghost" style="margin-top:10px" onclick="togglePause()">${m.paused?'重新打开信箱':'暂停接收来信'}</button>
+      <div class="row" style="margin-top:10px"><input id="mute" placeholder="屏蔽词"/><button class="search-btn" onclick="addMute()">添加</button></div>
+      <div class="muted">${(m.mutedWords||[]).length? '已屏蔽：'+m.mutedWords.join('、') : ''}</div></div>` :
+      (m.paused ? `<div class="card" style="color:var(--accent)">主人暂时关上了信箱。</div>` : `<div class="card">
+        <div class="mode">
+          <button class="${boxAnon?'on':''}" onclick="boxAnon=true;openBox(${code})">匿名提问</button>
+          <button class="${!boxAnon?'on named':''}" onclick="boxAnon=false;openBox(${code})">署名提问</button>
+        </div>
+        <div class="prompt" onclick="document.getElementById('ask').value=hint;shuffle();openBox(${code})">用这句：${hint}</div>
+        <div class="muted" style="cursor:pointer" onclick="shuffle();openBox(${code})">换一句</div>
+        <textarea id="ask" placeholder="${boxAnon?'写下一句匿名的话…':'以你的昵称发送…'}"></textarea>
+        <button class="btn primary" style="margin-top:8px" onclick="sendAsk(${code})">${boxAnon?'匿名发送':'署名发送'}</button>
+        <button class="btn ghost" style="margin-top:8px" onclick="follow(${code})">看这位朋友的公开问答</button>
+      </div>`)}
+    <h3>信箱墙</h3>
+    ${wall.length? wall.map(x => `<div class="card"><span class="tag ${x.isAnonymous?'tag-anon':'tag-named'}">${x.isAnonymous?'匿名':'署名'}</span>
+      <p>${x.content}</p><div class="muted">主人回复</div><p>${x.reply.content}</p></div>`).join('') : '<div class="empty">还没有公开内容</div>'}`
+  show('mailbox')
+}
+function sendAsk(code){
+  const u = me(), m = box(code)
+  if (m.paused) return alert('这个信箱暂时不接收新留言')
+  const content = document.getElementById('ask').value.trim()
+  if (!content) return alert('请写下你的留言')
+  if ((m.mutedWords||[]).some(w => content.includes(w))) return alert('这句话里有信箱主人不想看到的词')
+  db.messages.unshift({ id: uid('msg'), mailboxCode: Number(code), fromId: u.id, isAnonymous: boxAnon, content, createdAt: now(), archived:false, read:false, reply:null })
+  m.messageCount += 1; save(db)
+  alert(boxAnon ? '已匿名送达' : '已署名送达')
+  openBox(code)
+}
+function togglePause(){ const m = box(me().mailboxCode); m.paused = !m.paused; save(db); openBox(m.code) }
+function addMute(){
+  const w = document.getElementById('mute').value.trim(); if (!w) return
+  const m = box(me().mailboxCode); m.mutedWords = m.mutedWords || []; m.mutedWords.push(w); save(db); openBox(m.code)
+}
+function follow(code){
+  db.follows = db.follows || []
+  if (!db.follows.find(f => f.userId===db.me && f.code===Number(code))) db.follows.push({ userId: db.me, code: Number(code) })
+  save(db); alert('已放入好友动态')
+}
+function setInbox(t){
+  inboxTab = t
+  ;['unanswered','answered','sent'].forEach((k,i) => document.getElementById('t'+(i+1)).className = t===k ? (k==='sent'?'on named':'on') : '')
+  renderInbox()
+}
+function renderInbox(){
+  const u = me()
+  const mine = u.mailboxCode ? box(u.mailboxCode) : null
+  document.getElementById('pauseBar').innerHTML = mine ? `<div class="muted" style="text-align:center;color:var(--accent);margin-bottom:8px;cursor:pointer" onclick="const b=box(me().mailboxCode);b.paused=!b.paused;save(db);renderInbox()">${mine.paused?'信箱已暂停 · 点此重新打开':'接收中 · 点此暂停来信'}</div>` : ''
+  if (inboxTab==='unanswered') {
+    if (!u.mailboxCode) { document.getElementById('inboxList').innerHTML = `<div class="empty">还没有信箱<br><br><button class="btn primary" onclick="show('create')">去发布</button></div>`; return }
+    const list = db.messages.filter(m => m.mailboxCode===u.mailboxCode && !m.reply && !m.archived)
+    document.getElementById('inboxList').innerHTML = list.length ? list.map(m => itemCard(m, true)).join('') : '<div class="empty">没有待回复的来信</div>'
+  } else if (inboxTab==='answered') {
+    const list = db.messages.filter(m => m.mailboxCode===u.mailboxCode && m.reply && !m.archived)
+    document.getElementById('inboxList').innerHTML = list.length ? list.map(m => itemCard(m, true)).join('') : '<div class="empty">还没有回复过</div>'
+  } else {
+    const list = db.messages.filter(m => m.fromId===u.id)
+    document.getElementById('inboxList').innerHTML = list.length ? list.map(m => {
+      const b = box(m.mailboxCode)
+      return `<div class="card item" onclick="openThread('${m.id}')"><div class="between"><b>发给 #${m.mailboxCode} ${b?b.title:''}</b><span class="status ${m.reply?'done':''}">${m.reply?'对方已回复':'等待回复'}</span></div><p>${m.content}</p>${m.reply?`<p>回复：${m.reply.content}</p>`:''}</div>`
+    }).join('') : '<div class="empty">你还没有给别人留过言</div>'
+  }
+}
+function itemCard(m){
+  return `<div class="card item" onclick="openThread('${m.id}')">
+    <div class="between"><span class="tag ${m.isAnonymous?'tag-anon':'tag-named'}">${m.isAnonymous?'匿名来信':'署名来信'}</span>
+    <span class="status ${m.reply?'done':''}">${m.reply?visLabel(m.reply.visibility):'待回复'}</span></div>
+    <p>${m.content}</p>${m.reply?`<div class="muted">${m.reply.content}</div>`:''}</div>`
+}
+function openThread(id){
+  const m = db.messages.find(x => x.id===id), b = box(m.mailboxCode), owner = b.ownerId===db.me
+  if (owner) m.read = true; save(db)
+  document.getElementById('threadBody').innerHTML = `<div class="card">
+    <span class="tag ${m.isAnonymous?'tag-anon':'tag-named'}">${m.isAnonymous?'匿名提问':'署名提问'}</span>
+    <p>${m.content}</p>
+    ${m.reply?`<div class="muted">回复 · ${visLabel(m.reply.visibility)}</div><p>${m.reply.content}</p>
+      <button class="btn ghost" onclick="navigator.clipboard.writeText('问：${m.content}\\n答：${m.reply.content}\\n来自信箱 #${b.code}');alert('问答已复制，可发到微信')">复制问答卡片文案</button>`:''}
+  </div>
+  ${owner && !m.reply ? `<div class="card"><textarea id="rep" placeholder="写下回复"></textarea>
+    <div class="mode">
+      <button class="${vis==='private'?'on':''}" onclick="vis='private';openThread('${id}')">仅对方可见</button>
+      <button class="${vis==='mailbox'?'on':''}" onclick="vis='mailbox';openThread('${id}')">公开到信箱墙</button>
+      <button class="${vis==='everyone'?'on named':''}" onclick="vis='everyone';openThread('${id}')">公开到好友动态</button>
+    </div>
+    <button class="btn primary" onclick="reply('${id}')">回复对方</button>
+    <button class="btn ghost" style="margin-top:8px" onclick="mArchive('${id}')">归档</button>
+  </div>` : (owner ? `<button class="btn ghost" onclick="mArchive('${id}')">归档</button>` : '')}`
+  show('thread')
+}
+function reply(id){
+  const m = db.messages.find(x => x.id===id)
+  const content = document.getElementById('rep').value.trim()
+  if (!content) return alert('请填写回复')
+  m.reply = { content, createdAt: now(), visibility: vis }
+  save(db); alert('已回复'); openThread(id)
+}
+function mArchive(id){
+  db.messages.find(x => x.id===id).archived = true; save(db); show('inbox')
+}
+function setEvery(t){
+  everyTab = t
+  document.getElementById('e1').className = t==='feed'?'on':''
+  document.getElementById('e2').className = t==='friends'?'on named':''
+  renderEvery()
+}
+function friendCodes(){
+  const u = me(); const set = new Set()
+  ;(u.contacts||[]).forEach(phone => {
+    const f = db.users.find(x => x.phone===phone && x.mailboxCode)
+    if (f) set.add(f.mailboxCode)
+  })
+  ;(db.follows||[]).forEach(f => { if (f.userId===u.id) set.add(Number(f.code)) })
+  if (u.mailboxCode) set.add(u.mailboxCode)
+  return set
+}
+function renderEvery(){
+  if (everyTab==='feed') {
+    const codes = friendCodes()
+    const list = db.messages.filter(m => m.reply && !m.archived && (m.reply.visibility==='mailbox'||m.reply.visibility==='everyone') && codes.has(m.mailboxCode))
+    document.getElementById('everyBody').innerHTML = `<div class="card muted">这里只出现你关注的人、通讯录朋友，以及你自己公开过的问答。</div>
+      <div class="card"><div class="row"><input id="fc" type="number" placeholder="输入信箱编号关注"/><button class="search-btn" onclick="follow(Number(document.getElementById('fc').value));renderEvery()">关注</button></div></div>
+      ${list.length? list.map(m => { const b=box(m.mailboxCode); return `<div class="card item" onclick="openBox(${m.mailboxCode})"><div class="muted">#${m.mailboxCode} ${b.title}</div><p>问：${m.content}</p><p><b>答：${m.reply.content}</b></p><div style="color:var(--accent);font-weight:700">去信箱留言</div></div>` }).join('') : '<div class="empty">还没有好友公开问答。去关注 #1 试试。</div>'}`
+  } else {
+    const friends = db.users.filter(u => u.id!==db.me && u.phone && (me().contacts||[]).includes(u.phone))
+    document.getElementById('everyBody').innerHTML = `<div class="card muted">通讯录只是辅助。更稳的是分享卡片，或用编号关注。演示号 13800000001。</div>
+      <button class="btn ghost" onclick="addFriend()">添加朋友号码</button>
+      ${friends.length? friends.map(f => `<div class="card item" onclick="${f.mailboxCode?`openBox(${f.mailboxCode})`:''}"><b>${f.nickname}</b><div class="muted">${f.mailboxCode?'信箱 #'+f.mailboxCode:'还没有信箱'}</div></div>`).join('') : '<div class="empty">还没有匹配到朋友</div>'}`
+  }
+}
+function addFriend(){
+  const phone = prompt('输入好友手机号','13800000001'); if (!phone) return
+  const u = me(); u.contacts = u.contacts || []; if (!u.contacts.includes(phone)) u.contacts.push(phone)
+  save(db); renderEvery()
+}
+if (db.me) { show('home'); document.getElementById('tabbar').style.display='flex' }
+</script>
+</body>
+</html>

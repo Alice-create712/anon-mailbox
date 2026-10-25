@@ -1,0 +1,10 @@
+.h {
+  font-weight: 700;
+  margin: 24rpx 0 12rpx;
+}
+
+.p {
+  color: #5c5348;
+  white-space: pre-wrap;
+  margin-bottom: 12rpx;
+}

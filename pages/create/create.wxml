@@ -1,0 +1,10 @@
+<view class="safe-page">
+  <view class="lead">信箱编号按全站发布顺序生成，发布后不可更改。</view>
+  <view class="card">
+    <view class="label">信箱名称</view>
+    <input class="field" maxlength="20" placeholder="例如：周末提问箱" value="{{title}}" bindinput="onTitle" />
+    <view class="label">给来信人的说明</view>
+    <textarea class="area" maxlength="80" value="{{intro}}" bindinput="onIntro" />
+  </view>
+  <view class="btn-primary" bindtap="submit">发布并领取编号</view>
+</view>

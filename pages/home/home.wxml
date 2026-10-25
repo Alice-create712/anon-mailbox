@@ -1,0 +1,51 @@
+<view class="safe-page">
+  <view class="hello">
+    <view class="hi">你好，{{user.nickname || '来信的人'}}</view>
+    <view class="muted">把信箱卡片发给朋友。编号只是邮戳，不是唯一入口。</view>
+  </view>
+
+  <view class="card letter" wx:if="{{mailbox}}">
+    <view class="stamp">邮戳 #{{mailbox.code}}</view>
+    <view class="letter-title">{{mailbox.title}}</view>
+    <view class="muted">{{mailbox.intro}}</view>
+    <view class="muted tiny" wx:if="{{mailbox.paused}}">已暂停接收来信</view>
+    <view class="muted tiny" wx:elif="{{unreadCount}}">有 {{unreadCount}} 封还没看</view>
+    <button class="btn-primary share-btn" open-type="share">分享我的信箱</button>
+    <view class="btn-ghost" bindtap="copyCode">复制编号 {{mailbox.code}}</view>
+    <view class="letter-foot" bindtap="goMine">打开我的信箱墙</view>
+  </view>
+
+  <view class="card create-card" wx:else>
+    <view class="create-title">还没有自己的信箱</view>
+    <view class="muted">发布后会得到顺序编号，做成卡片就能发给微信好友。</view>
+    <view class="btn-primary" bindtap="goCreate">发布我的信箱</view>
+  </view>
+
+  <view class="search card">
+    <view class="search-title">按编号查找</view>
+    <view class="search-row">
+      <input
+        class="search-input"
+        type="number"
+        placeholder="例如 1、100"
+        value="{{keyword}}"
+        bindinput="onKeyword"
+        confirm-type="search"
+        bindconfirm="search"
+      />
+      <view class="search-btn" bindtap="search">查找</view>
+    </view>
+  </view>
+
+  <view class="section-title">最近发布的信箱</view>
+  <view class="list">
+    <view class="card box-item" wx:for="{{latest}}" wx:key="code" data-code="{{item.code}}" bindtap="goBox">
+      <view class="box-code">#{{item.code}}</view>
+      <view class="box-main">
+        <view class="box-title">{{item.title}}</view>
+        <view class="muted tiny">{{item.intro}}</view>
+      </view>
+      <view class="go">留言</view>
+    </view>
+  </view>
+</view>

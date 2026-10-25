@@ -1,0 +1,26 @@
+<view class="safe-page">
+  <view class="card" wx:if="{{type === 'user'}}">
+    <view class="h">匿名问答箱用户协议</view>
+    <view class="p">欢迎使用匿名问答箱。使用本小程序即表示你同意按本协议使用服务。</view>
+    <view class="h">服务内容</view>
+    <view class="p">你可发布带顺序编号的信箱、向他人匿名或署名留言、查看自己信箱的来信与自己发出留言的回复，并在 Everyone 浏览公开动态、匹配通讯录好友。</view>
+    <view class="h">匿名与署名</view>
+    <view class="p">留言、提问、动态与评论默认匿名。只有你主动选择署名，对方才能看到你的昵称。匿名不等于可以发布违法违规内容。</view>
+    <view class="h">行为规范</view>
+    <view class="p">禁止发布违法、欺凌、骚扰、色情、赌博及侵犯他人权益的内容。我们可能对违规内容进行拦截、删除，并停止对违规账号提供服务。</view>
+    <view class="h">免责</view>
+    <view class="p">用户应对自己发布的内容负责。本小程序提供信息交流工具，不对用户之间的言论承担保证责任。未成年人请在监护人指导下使用。</view>
+  </view>
+  <view class="card" wx:else>
+    <view class="h">匿名问答箱隐私政策</view>
+    <view class="p">我们仅在提供服务所必需的范围内处理个人信息，不会出售你的个人信息。</view>
+    <view class="h">收集的信息</view>
+    <view class="p">1. 微信登录相关标识，用于账号识别。\n2. 你填写的昵称、选择的头像，仅在你选择署名前不会向其他用户展示。\n3. 可选的手机号（经微信授权或你主动填写），仅用于通讯录好友匹配，以哈希形式保存，不公开展示。\n4. 你发布的信箱资料、留言、回复与 Everyone 动态。</view>
+    <view class="h">通讯录</view>
+    <view class="p">仅在你主动点击「从通讯录添加好友」时读取你选择的联系人号码，用于匹配同样使用本小程序的用户。我们不会上传你的完整通讯录。</view>
+    <view class="h">存储与安全</view>
+    <view class="p">开发预览数据保存在本机。上架后将使用微信云开发存储，访问按身份隔离。匿名留言对信箱主人也隐藏发送者昵称。</view>
+    <view class="h">你的权利</view>
+    <view class="p">你可停止使用本小程序。如需删除账号数据，可通过小程序内反馈或微信公众平台投诉途径联系开发者。</view>
+  </view>
+</view>

@@ -1,0 +1,40 @@
+<view class="safe-page">
+  <view class="tabs">
+    <view class="tab {{tab === 'feed' ? 'on' : ''}}" data-tab="feed" bindtap="setTab">好友动态</view>
+    <view class="tab {{tab === 'friends' ? 'on' : ''}}" data-tab="friends" bindtap="setTab">朋友的信箱</view>
+  </view>
+
+  <block wx:if="{{tab === 'feed'}}">
+    <view class="card tools">
+      <view class="muted">这里只出现你关注的人、通讯录匹配到的朋友，以及你自己公开过的问答。不是全站广场。</view>
+      <view class="cmt-row">
+        <input class="cmt-input" type="number" placeholder="输入信箱编号关注" value="{{followCode}}" bindinput="onFollowCode" />
+        <view class="cmt-send" bindtap="followByCode">关注</view>
+      </view>
+    </view>
+    <view class="empty" wx:if="{{!posts.length}}">还没有好友公开问答。去关注 #1，或把通讯录里的朋友加进来。</view>
+    <view class="card post" wx:for="{{posts}}" wx:key="id" data-code="{{item.mailboxCode}}" bindtap="goBox">
+      <view class="muted tiny">#{{item.mailboxCode}} {{item.mailboxTitle}} · {{item.timeText}}</view>
+      <view class="q">问：{{item.question}}</view>
+      <view class="a">答：{{item.answer}}</view>
+      <view class="go">去信箱留言</view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="card tools">
+      <view class="muted">通讯录只是辅助。更稳的是让朋友点开你分享的卡片，或用编号关注。</view>
+      <button class="btn-ghost phone-btn" open-type="getPhoneNumber" bindgetphonenumber="onGetPhoneNumber">{{bound ? '已绑定手机号' : '微信授权手机号'}}</button>
+      <view class="btn-ghost" bindtap="bindPhone">手动绑定（预览可填 13800000001）</view>
+      <view class="btn-primary" bindtap="addContact">添加朋友号码</view>
+    </view>
+    <view class="empty" wx:if="{{!friends.length}}">还没有匹配到朋友</view>
+    <view class="card friend" wx:for="{{friends}}" wx:key="id" data-code="{{item.mailboxCode}}" bindtap="goBox">
+      <view class="fname">{{item.nickname}}</view>
+      <view class="muted" wx:if="{{item.mailbox}}">信箱 #{{item.mailbox.code}} · {{item.mailbox.title}}</view>
+      <view class="muted" wx:else>还没有发布信箱</view>
+      <view class="go" wx:if="{{item.mailboxCode}}">去留言</view>
+    </view>
+    <view class="pending muted" wx:if="{{pending.length}}">已记录 {{pending.length}} 位，等待对方使用。</view>
+  </block>
+</view>

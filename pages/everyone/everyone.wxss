@@ -1,0 +1,88 @@
+.tabs {
+  display: flex;
+  background: #efe6d6;
+  border-radius: 20rpx;
+  padding: 6rpx;
+  margin-bottom: 24rpx;
+}
+
+.tab {
+  flex: 1;
+  height: 72rpx;
+  line-height: 72rpx;
+  text-align: center;
+  border-radius: 16rpx;
+  color: #8a8174;
+  font-weight: 600;
+}
+
+.tab.on {
+  background: #fffbf4;
+  color: #2c2416;
+}
+
+.tools .btn-ghost,
+.tools .btn-primary,
+.phone-btn {
+  margin-top: 16rpx;
+  width: 100%;
+}
+
+.cmt-row {
+  display: flex;
+  gap: 12rpx;
+  margin-top: 16rpx;
+}
+
+.cmt-input {
+  flex: 1;
+  height: 72rpx;
+  background: #f7f1e8;
+  border-radius: 16rpx;
+  padding: 0 20rpx;
+}
+
+.cmt-send {
+  width: 120rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  text-align: center;
+  background: #a33b2b;
+  color: #fff;
+  border-radius: 16rpx;
+  font-size: 24rpx;
+}
+
+.post,
+.friend {
+  margin-top: 16rpx;
+}
+
+.q {
+  margin: 12rpx 0 8rpx;
+}
+
+.a {
+  font-weight: 600;
+}
+
+.go {
+  color: #a33b2b;
+  font-size: 24rpx;
+  font-weight: 600;
+  margin-top: 12rpx;
+}
+
+.fname {
+  font-weight: 700;
+  font-size: 32rpx;
+}
+
+.pending {
+  margin-top: 20rpx;
+  text-align: center;
+}
+
+.tiny {
+  font-size: 22rpx;
+}

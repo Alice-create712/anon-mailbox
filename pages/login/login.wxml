@@ -1,0 +1,35 @@
+<view class="login">
+  <view class="hero">
+    <view class="seal">匿</view>
+    <view class="title">匿名问答箱</view>
+    <view class="sub">先把话写下来。署名是可选项，匿名才是默认。</view>
+  </view>
+
+  <view class="card form">
+    <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+      <image wx:if="{{avatarUrl}}" class="avatar" src="{{avatarUrl}}" mode="aspectFill" />
+      <view wx:else class="avatar placeholder">头像</view>
+    </button>
+    <input
+      class="nick"
+      type="nickname"
+      maxlength="20"
+      placeholder="填写昵称（署名时才会显示）"
+      value="{{nickname}}"
+      bindinput="onNickname"
+    />
+    <view class="hint">登录后可发布自己的信箱，编号按发布顺序从 1 起。</view>
+  </view>
+
+  <view class="agree" bindtap="toggleAgree">
+    <view class="check {{agreeing ? 'on' : ''}}"></view>
+    <view class="agree-text">
+      我已阅读并同意
+      <text class="link" catchtap="openLegal" data-type="user">《用户协议》</text>
+      和
+      <text class="link" catchtap="openLegal" data-type="privacy">《隐私政策》</text>
+    </view>
+  </view>
+
+  <button class="btn-primary enter" bindtap="login">{{loading ? '进入中…' : '微信登录并进入'}}</button>
+</view>

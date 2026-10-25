@@ -1,0 +1,30 @@
+<view class="safe-page" wx:if="{{message}}">
+  <view class="muted">信箱 #{{mailbox.code}} {{mailbox.title}}</view>
+  <view class="card">
+    <view class="tag {{message.isAnonymous ? 'tag-anon' : 'tag-named'}}">
+      {{message.isAnonymous ? '匿名提问' : '署名提问'}}
+    </view>
+    <view class="body">{{message.content}}</view>
+    <view class="muted tiny">{{message.timeText}} · {{message.isAnonymous ? '身份已隐藏' : message.from.nickname}}</view>
+    <view class="reply" wx:if="{{message.reply}}">
+      <view class="muted tiny">回复 · {{message.visText}} · {{message.replyTime}}</view>
+      <view>{{message.reply.content}}</view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{isOwner && !message.reply}}">
+    <textarea class="area" maxlength="500" placeholder="写下回复" value="{{reply}}" bindinput="onReply" />
+    <view class="vis">
+      <view class="chip {{visibility === 'private' ? 'on' : ''}}" data-vis="private" bindtap="setVis">仅对方可见</view>
+      <view class="chip {{visibility === 'mailbox' ? 'on' : ''}}" data-vis="mailbox" bindtap="setVis">公开到信箱墙</view>
+      <view class="chip {{visibility === 'everyone' ? 'on named' : ''}}" data-vis="everyone" bindtap="setVis">公开到好友动态</view>
+    </view>
+    <view class="btn-primary" bindtap="sendReply">回复对方</view>
+  </view>
+
+  <view class="btn-ghost" wx:if="{{message.reply}}" bindtap="shareReply">复制问答卡片文案</view>
+  <view class="row-btns" wx:if="{{isOwner}}">
+    <view class="ghost-mini" bindtap="archive">归档</view>
+    <view class="ghost-mini" bindtap="report">举报</view>
+  </view>
+</view>

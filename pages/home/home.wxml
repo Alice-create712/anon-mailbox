@@ -1,7 +1,7 @@
 <view class="safe-page">
   <view class="hello">
-    <view class="hi">你好，{{user.nickname || '来信的人'}}</view>
-    <view class="muted">把信箱卡片发给朋友。编号只是邮戳，不是唯一入口。</view>
+    <view class="hi">匿名信箱</view>
+    <view class="muted">说出你不敢公开说的话</view>
   </view>
 
   <view class="card letter" wx:if="{{mailbox}}">

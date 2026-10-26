@@ -5,6 +5,7 @@
 .hi {
   font-size: 44rpx;
   font-weight: 700;
+  color: #a33b2b;
 }
 
 .search-title,

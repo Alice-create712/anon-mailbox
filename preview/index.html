@@ -29,7 +29,7 @@
     .tag { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; }
     .tag-anon { background: #e8edf5; color: var(--anon); }
     .tag-named { background: #f4e4df; color: var(--accent); }
-    .hi { font-size: 24px; font-weight: 800; }
+    .hi { font-size: 24px; font-weight: 800; color: #a33b2b; }
     .row { display: flex; gap: 8px; }
     .row input { flex: 1; }
     .search-btn { width: 72px; background: var(--accent); color: #fff; border: 0; border-radius: 12px; font-weight: 700; cursor: pointer; }
@@ -62,8 +62,8 @@
 
     <div id="home" class="page">
       <div class="bar">首页</div>
-      <div class="hi" id="hello"></div>
-      <p class="muted">把信箱卡片发给朋友。编号只是邮戳。</p>
+      <div class="hi">匿名信箱</div>
+      <p class="muted">说出你不敢公开说的话</p>
       <div id="mine"></div>
       <div class="card">
         <b>按编号查找</b>
@@ -183,7 +183,6 @@ function unread(){
 }
 function renderHome(){
   const u = me()
-  document.getElementById('hello').textContent = '你好，' + (u ? u.nickname : '')
   const mine = u && u.mailboxCode ? box(u.mailboxCode) : null
   const n = unread()
   document.getElementById('mine').innerHTML = mine ? `<div class="card">

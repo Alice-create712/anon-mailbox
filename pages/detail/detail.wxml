@@ -1,14 +1,14 @@
 <view class="safe-page" wx:if="{{message}}">
   <view class="muted">信箱 #{{mailbox.code}} {{mailbox.title}}</view>
-  <view class="card">
+  <view class="sheet">
     <view class="tag {{message.isAnonymous ? 'tag-anon' : 'tag-named'}}">
       {{message.isAnonymous ? '匿名提问' : '署名提问'}}
     </view>
-    <view class="body">{{message.content}}</view>
+    <view class="q-hand lined q">{{message.content}}</view>
     <view class="muted tiny">{{message.timeText}} · {{message.isAnonymous ? '身份已隐藏' : message.from.nickname}}</view>
     <view class="reply" wx:if="{{message.reply}}">
-      <view class="muted tiny">回复 · {{message.visText}} · {{message.replyTime}}</view>
-      <view>{{message.reply.content}}</view>
+      <view class="muted tiny">回复 · {{message.visText}}</view>
+      <view class="a-print">{{message.reply.content}}</view>
     </view>
   </view>
 
@@ -22,7 +22,18 @@
     <view class="btn-primary" bindtap="sendReply">回复对方</view>
   </view>
 
-  <view class="btn-ghost" wx:if="{{message.reply}}" bindtap="shareReply">复制问答卡片文案</view>
+  <view class="btn-primary" wx:if="{{message.reply}}" bindtap="openPoster">生成问答海报</view>
+  <view class="btn-ghost" wx:if="{{message.reply}}" bindtap="shareReply">复制文字</view>
+
+  <view class="mask" wx:if="{{showPoster}}" bindtap="closePoster">
+    <view class="poster lined" catchtap="noop">
+      <view class="wax">匿</view>
+      <view class="stamp">#{{mailbox.code}}</view>
+      <view class="q-hand q">{{message.content}}</view>
+      <view class="a-print">{{message.reply.content}}</view>
+      <view class="muted tiny">说出你不敢公开说的话</view>
+    </view>
+  </view>
   <view class="row-btns" wx:if="{{isOwner}}">
     <view class="ghost-mini" bindtap="archive">归档</view>
     <view class="ghost-mini" bindtap="report">举报</view>

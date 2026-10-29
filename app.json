@@ -25,15 +25,15 @@
     "list": [
       {
         "pagePath": "pages/home/home",
-        "text": "首页"
+        "text": "信封"
       },
       {
         "pagePath": "pages/inbox/inbox",
-        "text": "收件箱"
+        "text": "来信"
       },
       {
         "pagePath": "pages/everyone/everyone",
-        "text": "Everyone"
+        "text": "友人"
       }
     ]
   },

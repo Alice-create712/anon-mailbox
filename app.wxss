@@ -7,6 +7,81 @@ page {
   box-sizing: border-box;
 }
 
+.lined {
+  background-color: #fff8ee;
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 47rpx,
+    rgba(163, 59, 43, 0.12) 48rpx
+  );
+  background-size: 100% 48rpx;
+}
+
+.q-hand {
+  font-family: "KaiTi", "STKaiti", "PingFang SC", serif;
+  font-size: 32rpx;
+  line-height: 48rpx;
+}
+
+.a-print {
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.sheet {
+  background: #fff8ee;
+  padding: 28rpx;
+  margin-bottom: 20rpx;
+  border: 1rpx solid rgba(163, 59, 43, 0.1);
+}
+
+.sheet.tilt {
+  transform: rotate(-0.6deg);
+}
+
+.sheet.tilt-r {
+  transform: rotate(0.7deg);
+}
+
+.wax {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 50%;
+  background: #a33b2b;
+  color: #fffbf4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 32rpx;
+}
+
+.empty-env {
+  text-align: center;
+  padding: 48rpx 20rpx 32rpx;
+}
+
+.env-mini {
+  width: 200rpx;
+  height: 120rpx;
+  margin: 0 auto 16rpx;
+  background: #f4e6d0;
+  border: 2rpx solid rgba(163, 59, 43, 0.18);
+  position: relative;
+}
+
+.env-mini::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  border-left: 100rpx solid transparent;
+  border-right: 100rpx solid transparent;
+  border-top: 56rpx solid #e8d5bc;
+}
+
 view, text, navigator, button, input, textarea {
   box-sizing: border-box;
 }

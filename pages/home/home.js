@@ -1,4 +1,5 @@
 const { call } = require('../../utils/api')
+const { PROMPTS } = require('../../utils/prompts')
 
 Page({
   data: {
@@ -6,7 +7,8 @@ Page({
     mailbox: null,
     latest: [],
     keyword: '',
-    unreadCount: 0
+    unreadCount: 0,
+    slips: PROMPTS
   },
 
   onShow() {
@@ -35,6 +37,14 @@ Page({
         wx.showToast({ title: err.message || '加载失败', icon: 'none' })
       }
     }
+  },
+
+  copySlip(e) {
+    const text = e.currentTarget.dataset.text
+    wx.setClipboardData({
+      data: text,
+      success: () => wx.showToast({ title: '已抄下这句，去别人信封里问', icon: 'none' })
+    })
   },
 
   onKeyword(e) {

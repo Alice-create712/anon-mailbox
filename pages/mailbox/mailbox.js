@@ -1,6 +1,6 @@
 const { call } = require('../../utils/api')
 const { formatRelative } = require('../../utils/util')
-const { randomPrompt } = require('../../utils/prompts')
+const { PROMPTS, randomPrompt } = require('../../utils/prompts')
 
 Page({
   data: {
@@ -12,6 +12,8 @@ Page({
     isAnonymous: true,
     sending: false,
     prompt: '',
+    slips: PROMPTS,
+    showSettings: false,
     muteInput: ''
   },
 
@@ -52,12 +54,12 @@ Page({
     this.setData({ isAnonymous: false })
   },
 
-  usePrompt() {
-    this.setData({ content: this.data.prompt, prompt: randomPrompt() })
+  pickSlip(e) {
+    this.setData({ content: e.currentTarget.dataset.text })
   },
 
-  shufflePrompt() {
-    this.setData({ prompt: randomPrompt() })
+  toggleSettings() {
+    this.setData({ showSettings: !this.data.showSettings })
   },
 
   onContent(e) {

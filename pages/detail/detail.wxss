@@ -1,10 +1,10 @@
-.card {
+.sheet {
   margin-top: 20rpx;
 }
 
-.body {
-  font-size: 32rpx;
-  margin: 20rpx 0 12rpx;
+.q {
+  margin: 16rpx 0;
+  min-height: 96rpx;
 }
 
 .tiny {
@@ -68,4 +68,44 @@
   text-align: center;
   background: #efe6d6;
   border-radius: 999rpx;
+}
+
+.btn-primary,
+.btn-ghost {
+  margin-top: 16rpx;
+}
+
+.mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(44, 36, 22, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+.poster {
+  width: 580rpx;
+  min-height: 760rpx;
+  padding: 48rpx 40rpx;
+  position: relative;
+}
+
+.poster .wax {
+  position: absolute;
+  top: 24rpx;
+  right: 24rpx;
+}
+
+.poster .stamp {
+  display: inline-block;
+  border: 3rpx solid #a33b2b;
+  color: #a33b2b;
+  font-weight: 800;
+  font-size: 22rpx;
+  padding: 4rpx 12rpx;
 }

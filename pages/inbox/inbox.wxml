@@ -13,7 +13,10 @@
       <view>你还没有发布信箱</view>
       <view class="btn-primary mini" bindtap="goCreate">去发布</view>
     </view>
-    <view class="empty" wx:elif="{{!unanswered.length}}">没有待回复的来信</view>
+    <view class="empty-env" wx:elif="{{!unanswered.length}}">
+      <view class="env-mini"></view>
+      <view>没有待拆的来信</view>
+    </view>
     <view class="card item" wx:for="{{unanswered}}" wx:key="id" data-id="{{item.id}}" bindtap="open">
       <view class="row">
         <view class="tag {{item.isAnonymous ? 'tag-anon' : 'tag-named'}}">{{item.isAnonymous ? '匿名来信' : '署名来信'}}</view>

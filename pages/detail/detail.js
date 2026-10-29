@@ -8,7 +8,8 @@ Page({
     message: null,
     isOwner: false,
     reply: '',
-    visibility: 'private'
+    visibility: 'private',
+    showPoster: false
   },
 
   onLoad(query) {
@@ -92,5 +93,15 @@ Page({
       data: `问：${m.content}\n答：${m.reply.content}\n来自信箱 #${this.data.mailbox.code}`,
       success: () => wx.showToast({ title: '问答已复制，可发到微信' })
     })
-  }
+  },
+
+  openPoster() {
+    this.setData({ showPoster: true })
+  },
+
+  closePoster() {
+    this.setData({ showPoster: false })
+  },
+
+  noop() {}
 })

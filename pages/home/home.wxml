@@ -1,51 +1,53 @@
-<view class="safe-page">
+<view class="safe-page home">
   <view class="hello">
     <view class="hi">匿名信箱</view>
-    <view class="muted">说出你不敢公开说的话</view>
+    <view class="muted tagline">说出你不敢公开说的话</view>
   </view>
 
-  <view class="card letter" wx:if="{{mailbox}}">
-    <view class="stamp">邮戳 #{{mailbox.code}}</view>
-    <view class="letter-title">{{mailbox.title}}</view>
-    <view class="muted">{{mailbox.intro}}</view>
-    <view class="muted tiny" wx:if="{{mailbox.paused}}">已暂停接收来信</view>
-    <view class="muted tiny" wx:elif="{{unreadCount}}">有 {{unreadCount}} 封还没看</view>
-    <button class="btn-primary share-btn" open-type="share">分享我的信箱</button>
-    <view class="btn-ghost" bindtap="copyCode">复制编号 {{mailbox.code}}</view>
-    <view class="letter-foot" bindtap="goMine">打开我的信箱墙</view>
-  </view>
-
-  <view class="card create-card" wx:else>
-    <view class="create-title">还没有自己的信箱</view>
-    <view class="muted">发布后会得到顺序编号，做成卡片就能发给微信好友。</view>
-    <view class="btn-primary" bindtap="goCreate">发布我的信箱</view>
-  </view>
-
-  <view class="search card">
-    <view class="search-title">按编号查找</view>
-    <view class="search-row">
-      <input
-        class="search-input"
-        type="number"
-        placeholder="例如 1、100"
-        value="{{keyword}}"
-        bindinput="onKeyword"
-        confirm-type="search"
-        bindconfirm="search"
-      />
-      <view class="search-btn" bindtap="search">查找</view>
+  <view class="env-wrap" wx:if="{{mailbox}}">
+    <view class="flap"></view>
+    <view class="env-body">
+      <view class="wax {{unreadCount ? 'pulse' : ''}}">{{unreadCount ? unreadCount : '匿'}}</view>
+      <view class="stamp">邮戳 #{{mailbox.code}}</view>
+      <view class="env-title">{{mailbox.title}}</view>
+      <view class="muted tiny">{{mailbox.paused ? '已封口，暂停接收' : '未拆的信，写给愿意看的人'}}</view>
+      <button class="btn-primary share-btn" open-type="share">把信封发给朋友</button>
+      <view class="env-actions">
+        <text bindtap="goMine">拆开信箱</text>
+        <text bindtap="copyCode">复制邮戳</text>
+      </view>
     </view>
   </view>
 
-  <view class="section-title">最近发布的信箱</view>
-  <view class="list">
-    <view class="card box-item" wx:for="{{latest}}" wx:key="code" data-code="{{item.code}}" bindtap="goBox">
-      <view class="box-code">#{{item.code}}</view>
-      <view class="box-main">
-        <view class="box-title">{{item.title}}</view>
-        <view class="muted tiny">{{item.intro}}</view>
+  <view class="env-wrap" wx:else>
+    <view class="flap"></view>
+    <view class="env-body">
+      <view class="wax">封</view>
+      <view class="env-title">还没有自己的信封</view>
+      <view class="muted tiny">封口处留下名字，别人就能把不敢说的话塞进来。</view>
+      <view class="btn-primary share-btn" bindtap="goCreate">封上我的信箱</view>
+    </view>
+  </view>
+
+  <view class="floor">
+    <view class="floor-title">可以这样问进别人的信封</view>
+    <view class="slips">
+      <view class="slip" wx:for="{{slips}}" wx:key="*this" data-text="{{item}}" bindtap="copySlip">{{item}}</view>
+    </view>
+    <view class="find-strip lined">
+      <view class="find-label">找一只信箱</view>
+      <view class="search-row">
+        <input
+          class="search-input"
+          type="number"
+          placeholder="写下邮戳，例如 1"
+          value="{{keyword}}"
+          bindinput="onKeyword"
+          confirm-type="search"
+          bindconfirm="search"
+        />
+        <view class="search-btn" bindtap="search">拆开</view>
       </view>
-      <view class="go">留言</view>
     </view>
   </view>
 </view>

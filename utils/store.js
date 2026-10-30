@@ -13,6 +13,7 @@ function blank() {
     contacts: [],
     follows: [],
     reports: [],
+    notices: [],
     seeded: false
   }
 }
@@ -36,6 +37,9 @@ function ensureSeed(db) {
     avatarUrl: '',
     phoneHash: hashPhone('13800000001'),
     mailboxCode: 1,
+    recentCodes: [1],
+    notifyLetter: false,
+    notifyReply: false,
     createdAt: now() - 86400000 * 6
   }
   const demoB = {
@@ -44,6 +48,9 @@ function ensureSeed(db) {
     avatarUrl: '',
     phoneHash: hashPhone('13800000002'),
     mailboxCode: 2,
+    recentCodes: [2],
+    notifyLetter: false,
+    notifyReply: false,
     createdAt: now() - 86400000 * 4
   }
   db.users.push(demoA, demoB)
@@ -81,6 +88,7 @@ function ensureSeed(db) {
       content: '最近有没有一件事，你很想对谁说，却一直没开口？',
       createdAt: now() - 86400000 * 2,
       archived: false,
+      later: false,
       read: true,
       reply: {
         content: '有。所以才做了这个信箱。',
@@ -96,6 +104,7 @@ function ensureSeed(db) {
       content: '如果今天只能问一个问题，你会问自己什么？',
       createdAt: now() - 86400000,
       archived: false,
+      later: false,
       read: false,
       reply: null
     }

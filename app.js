@@ -5,15 +5,21 @@ App({
     user: null,
     useCloud: false,
     cloudEnv: '',
-    pendingMailboxCode: null
+    pendingMailboxCode: null,
+    subscribe: {
+      newLetter: '',
+      newReply: ''
+    }
   },
 
-  onLaunch() {
+  onLaunch(options) {
     const env = this.globalData.cloudEnv
     if (wx.cloud && env) {
       wx.cloud.init({ env, traceUser: true })
       this.globalData.useCloud = true
     }
+    const code = options && options.query && options.query.code
+    if (code) this.globalData.pendingMailboxCode = Number(code)
     this.restoreSession()
   },
 

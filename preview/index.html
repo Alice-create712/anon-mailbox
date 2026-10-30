@@ -94,6 +94,9 @@
       <div class="hi">匿名信箱</div>
       <p class="muted tagline">说出你不敢公开说的话</p>
       <div id="mine"></div>
+      <div class="floor-title" id="replyHint"></div>
+      <div class="floor-title" id="recentTitle"></div>
+      <div id="recent" class="row" style="flex-wrap:wrap;margin-bottom:8px"></div>
       <div class="floor-title">可以这样问进别人的信封</div>
       <div class="slips" id="homeSlips"></div>
       <div class="find-strip lined">
@@ -109,9 +112,10 @@
       <div class="bar">来信</div>
       <div id="pauseBar"></div>
       <div class="mode">
-        <button class="on" id="t1" onclick="setInbox('unanswered')">未拆</button>
-        <button id="t2" onclick="setInbox('answered')">已回</button>
-        <button id="t3" onclick="setInbox('sent')">我发出的</button>
+        <button class="on" id="t1" onclick="setInbox('unanswered')">未答</button>
+        <button id="t2" onclick="setInbox('later')">稍后</button>
+        <button id="t3" onclick="setInbox('answered')">已答</button>
+        <button id="t4" onclick="setInbox('sent')">发出</button>
       </div>
       <div id="inboxList"></div>
     </div>
@@ -163,15 +167,15 @@ const PROMPTS = ['今天过得怎么样？','有句一直没说出口的话？',
 const uid = (p) => p + '_' + Math.random().toString(36).slice(2,8)
 const now = () => Date.now()
 function blank() {
-  return { seq: 2, me: null, follows: [], users: [
-    { id:'demo_forest', nickname:'林间信箱', phone:'13800000001', mailboxCode:1, contacts:[] },
-    { id:'demo_night', nickname:'夜航者', phone:'13800000002', mailboxCode:2, contacts:[] }
+  return { seq: 2, me: null, follows: [], notices: [], users: [
+    { id:'demo_forest', nickname:'林间信箱', phone:'13800000001', mailboxCode:1, contacts:[], recentCodes:[1], notifyLetter:false, notifyReply:false },
+    { id:'demo_night', nickname:'夜航者', phone:'13800000002', mailboxCode:2, contacts:[], recentCodes:[2], notifyLetter:false, notifyReply:false }
   ], mailboxes: [
     { code:1, ownerId:'demo_forest', title:'林间信箱', intro:'把想说又不好意思说的话，放进这里。', messageCount:1, paused:false, mutedWords:[], topic:'最近有没有一直没说出口的话' },
     { code:2, ownerId:'demo_night', title:'夜航者的提问箱', intro:'匿名提问、认真回复。', messageCount:1, paused:false, mutedWords:[], topic:'' }
   ], messages: [
-    { id:'m1', mailboxCode:1, fromId:'demo_night', isAnonymous:true, content:'最近有没有一件事，你很想对谁说，却一直没开口？', createdAt: now()-86400000*2, archived:false, read:true, reply:{ content:'有。所以才做了这个信箱。', createdAt: now()-86400000, visibility:'mailbox' } },
-    { id:'m2', mailboxCode:2, fromId:'demo_forest', isAnonymous:true, content:'如果今天只能问一个问题，你会问自己什么？', createdAt: now()-86400000, archived:false, read:false, reply:null }
+    { id:'m1', mailboxCode:1, fromId:'demo_night', isAnonymous:true, content:'最近有没有一件事，你很想对谁说，却一直没开口？', createdAt: now()-86400000*2, archived:false, later:false, read:true, reply:{ content:'有。所以才做了这个信箱。', createdAt: now()-86400000, visibility:'mailbox' } },
+    { id:'m2', mailboxCode:2, fromId:'demo_forest', isAnonymous:true, content:'如果今天只能问一个问题，你会问自己什么？', createdAt: now()-86400000, archived:false, later:false, read:false, reply:null }
   ] }
 }
 function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || blank() } catch(e){ return blank() } }
@@ -201,7 +205,7 @@ function tab(id, btn){
 function login(){
   const nickname = document.getElementById('nick').value.trim() || '预览用户'
   if (!me()) {
-    const u = { id: uid('u'), nickname, phone:'', mailboxCode:null, contacts:[] }
+    const u = { id: uid('u'), nickname, phone:'', mailboxCode:null, contacts:[], recentCodes:[], notifyLetter:false, notifyReply:false }
     db.users.push(u); db.me = u.id; save(db)
   }
   show('home')
@@ -209,14 +213,25 @@ function login(){
 }
 function unread(){
   const u = me(); if (!u || !u.mailboxCode) return 0
-  return db.messages.filter(m => m.mailboxCode===u.mailboxCode && !m.reply && !m.archived).length
+  return db.messages.filter(m => m.mailboxCode===u.mailboxCode && !m.reply && !m.archived && !m.read).length
+}
+function letterStatus(m){
+  if (m.reply) return '对方已回复'
+  if (m.read) return '对方已读'
+  return '已送达'
+}
+function remember(code){
+  const u = me(); if (!u) return
+  const n = Number(code)
+  u.recentCodes = [n, ...(u.recentCodes||[]).filter(c => Number(c)!==n)].slice(0,8)
 }
 function renderHome(){
+  const u = me()
+  if (!u) return
   document.getElementById('homeSlips').innerHTML = PROMPTS.map(t =>
     `<div class="slip" onclick="navigator.clipboard.writeText('${t.replace(/'/g,'')}');alert('已抄下这句，去别人信封里问')">${t}</div>`
   ).join('')
-  const u = me()
-  const mine = u && u.mailboxCode ? box(u.mailboxCode) : null
+  const mine = u.mailboxCode ? box(u.mailboxCode) : null
   const n = unread()
   document.getElementById('mine').innerHTML = mine ? `
     <div class="env-wrap">
@@ -225,8 +240,10 @@ function renderHome(){
         <div class="wax ${n ? 'pulse' : ''}">${n ? n : '匿'}</div>
         <div class="stamp">邮戳 #${mine.code}</div>
         <div class="env-title">${mine.title}</div>
+        ${mine.topic?`<div class="muted">本周想被问 · ${mine.topic}</div>`:''}
         <div class="muted">${mine.paused ? '已封口，暂停接收' : '未拆的信，写给愿意看的人'}</div>
         <button class="btn primary" style="margin-top:14px" onclick="openShare(${mine.code})">把信封发给朋友</button>
+        <div class="muted" style="margin-top:8px;text-decoration:underline;cursor:pointer" onclick="me().notifyLetter=true;save(db);alert('来信时会提醒你');renderHome()">${u.notifyLetter?'来信提醒已打开':'来信时提醒我'}</div>
         <div class="env-actions">
           <span onclick="openBox(${mine.code})">拆开信箱</span>
           <span onclick="navigator.clipboard.writeText('${mine.code}')">复制邮戳</span>
@@ -242,6 +259,12 @@ function renderHome(){
         <button class="btn primary" style="margin-top:14px" onclick="show('create')">封上我的信箱</button>
       </div>
     </div>`
+  const replyN = (db.notices||[]).filter(n => n.userId===u.id && n.type==='reply' && !n.read).length
+  document.getElementById('replyHint').textContent = replyN ? '有人回了你发出的信，去「来信 · 发出」拆开。' : ''
+  if (replyN) (db.notices||[]).forEach(n => { if (n.userId===u.id) n.read = true }); save(db)
+  const recent = (u.recentCodes||[]).map(box).filter(Boolean).filter(m => m.ownerId!==u.id)
+  document.getElementById('recentTitle').textContent = recent.length ? '最近拆过的信封' : ''
+  document.getElementById('recent').innerHTML = recent.map(m => `<div class="sheet item" style="flex:1;min-width:120px" onclick="openBox(${m.code})"><span class="stamp">#${m.code}</span><div><b>${m.title}</b></div></div>`).join('')
 }
 function openShare(code, qna){
   const m = box(code)
@@ -267,10 +290,11 @@ function createBox(){
   if (u.mailboxCode) return openBox(u.mailboxCode)
   db.seq += 1
   const m = { code: db.seq, ownerId: u.id, title: document.getElementById('boxTitle').value.trim() || (u.nickname+'的信箱'), intro: document.getElementById('boxIntro').value.trim(), messageCount:0, paused:false, mutedWords:[], topic:'' }
-  db.mailboxes.push(m); u.mailboxCode = m.code; save(db)
+  db.mailboxes.push(m); u.mailboxCode = m.code; u.notifyLetter = true; save(db)
   show('home'); openShare(m.code)
 }
 function openBox(code){
+  remember(code); save(db)
   const m = box(code), u = me(), owner = m.ownerId === u.id
   const wall = db.messages.filter(x => x.mailboxCode===m.code && x.reply && !x.archived && (x.reply.visibility==='mailbox' || x.reply.visibility==='everyone'))
   const slips = PROMPTS.map(t => `<div class="slip" onclick="document.getElementById('ask').value='${t.replace(/'/g,'')}';">${t}</div>`).join('')
@@ -285,13 +309,15 @@ function openBox(code){
       <div class="stamp">邮戳 #${m.code}</div>
       <div class="env-title">${m.title}</div>
       <div class="welcome">${m.intro}</div>
-      ${m.topic?`<div class="muted">今日主题 · ${m.topic}</div>`:''}
+      ${m.topic?`<div class="muted">本周想被问 · ${m.topic}</div>`:''}
       <div class="link" onclick="openShare(${m.code})">把这只信封发给朋友</div>
     </div>
     ${owner ? `<div class="owner-bar"><span>来信在「来信」里回复。</span><span class="link" onclick="showSettings=!showSettings;openBox(${code})">${showSettings?'收起整理':'整理信箱'}</span></div>
       ${showSettings?`<div class="card"><button class="btn ghost" onclick="togglePause()">${m.paused?'重新打开':'暂停接收'}</button>
+      <div class="row" style="margin-top:8px"><input id="topic" placeholder="本周想被问的一句" value="${m.topic||''}"/><button class="search-btn" onclick="saveTopic()">贴上</button></div>
       <div class="row" style="margin-top:8px"><input id="mute" placeholder="屏蔽词"/><button class="search-btn" onclick="addMute()">添加</button></div></div>`:''}` :
       (m.paused ? `<div class="sheet" style="color:var(--accent);text-align:center">这只信箱暂时封口了。</div>` : `
+      ${m.topic?`<div class="sheet lined" style="cursor:pointer" onclick="document.getElementById('ask').value='${String(m.topic).replace(/'/g,'')}';">${m.topic}</div>`:''}
       <div class="slips">${slips}</div>
       <div class="write lined">
         <div class="mode">
@@ -311,15 +337,27 @@ function sendAsk(code){
   const content = document.getElementById('ask').value.trim()
   if (!content) return alert('请写下你的留言')
   if ((m.mutedWords||[]).some(w => content.includes(w))) return alert('这句话里有信箱主人不想看到的词')
-  db.messages.unshift({ id: uid('msg'), mailboxCode: Number(code), fromId: u.id, isAnonymous: boxAnon, content, createdAt: now(), archived:false, read:false, reply:null })
-  m.messageCount += 1; save(db)
-  alert(boxAnon ? '已匿名封进信封' : '已署名封进信封')
+  db.messages.unshift({ id: uid('msg'), mailboxCode: Number(code), fromId: u.id, isAnonymous: boxAnon, content, createdAt: now(), archived:false, later:false, read:false, reply:null })
+  m.messageCount += 1
+  u.notifyReply = true
+  const owner = user(m.ownerId)
+  if (owner && owner.notifyLetter) {
+    db.notices = db.notices || []
+    db.notices.unshift({ id: uid('nt'), userId: owner.id, type:'letter', read:false })
+  }
+  save(db)
+  alert(boxAnon ? '已匿名送达，回复时会提醒你' : '已署名送达，回复时会提醒你')
   openBox(code)
 }
 function togglePause(){ const m = box(me().mailboxCode); m.paused = !m.paused; save(db); openBox(m.code) }
 function addMute(){
   const w = document.getElementById('mute').value.trim(); if (!w) return
   const m = box(me().mailboxCode); m.mutedWords = m.mutedWords || []; m.mutedWords.push(w); save(db); openBox(m.code)
+}
+function saveTopic(){
+  const m = box(me().mailboxCode)
+  m.topic = (document.getElementById('topic').value || '').trim().slice(0,40)
+  save(db); openBox(m.code)
 }
 function follow(code){
   db.follows = db.follows || []
@@ -328,7 +366,7 @@ function follow(code){
 }
 function setInbox(t){
   inboxTab = t
-  ;['unanswered','answered','sent'].forEach((k,i) => document.getElementById('t'+(i+1)).className = t===k ? (k==='sent'?'on named':'on') : '')
+  ;['unanswered','later','answered','sent'].forEach((k,i) => document.getElementById('t'+(i+1)).className = t===k ? (k==='sent'?'on named':'on') : '')
   renderInbox()
 }
 function renderInbox(){
@@ -337,8 +375,11 @@ function renderInbox(){
   document.getElementById('pauseBar').innerHTML = mine ? `<div class="muted" style="text-align:center;color:var(--accent);margin-bottom:8px;cursor:pointer" onclick="const b=box(me().mailboxCode);b.paused=!b.paused;save(db);renderInbox()">${mine.paused?'信封已封口 · 点此打开':'接收中 · 点此封口'}</div>` : ''
   if (inboxTab==='unanswered') {
     if (!u.mailboxCode) { document.getElementById('inboxList').innerHTML = emptyEnv('还没有自己的信封') + `<button class="btn primary" onclick="show('create')">去封上</button>`; return }
-    const list = db.messages.filter(m => m.mailboxCode===u.mailboxCode && !m.reply && !m.archived)
+    const list = db.messages.filter(m => m.mailboxCode===u.mailboxCode && !m.reply && !m.archived && !m.later)
     document.getElementById('inboxList').innerHTML = list.length ? list.map(m => itemCard(m)).join('') : emptyEnv('没有待拆的来信')
+  } else if (inboxTab==='later') {
+    const list = db.messages.filter(m => m.mailboxCode===u.mailboxCode && !m.reply && !m.archived && m.later)
+    document.getElementById('inboxList').innerHTML = list.length ? list.map(m => itemCard(m)).join('') : emptyEnv('没有稍后要回的信')
   } else if (inboxTab==='answered') {
     const list = db.messages.filter(m => m.mailboxCode===u.mailboxCode && m.reply && !m.archived)
     document.getElementById('inboxList').innerHTML = list.length ? list.map(m => itemCard(m)).join('') : emptyEnv('还没有回过信')
@@ -346,14 +387,14 @@ function renderInbox(){
     const list = db.messages.filter(m => m.fromId===u.id)
     document.getElementById('inboxList').innerHTML = list.length ? list.map(m => {
       const b = box(m.mailboxCode)
-      return `<div class="sheet item" onclick="openThread('${m.id}')"><div class="between"><b>发给 #${m.mailboxCode} ${b?b.title:''}</b><span class="status ${m.reply?'done':''}">${m.reply?'对方已回复':'等待回复'}</span></div><div class="q-hand">${m.content}</div>${m.reply?`<div class="a-print">${m.reply.content}</div>`:''}</div>`
+      return `<div class="sheet item" onclick="openThread('${m.id}')"><div class="between"><b>发给 #${m.mailboxCode} ${b?b.title:''}</b><span class="status ${m.reply?'done':''}">${letterStatus(m)}</span></div><div class="q-hand">${m.content}</div>${m.reply?`<div class="a-print">${m.reply.content}</div>`:''}</div>`
     }).join('') : emptyEnv('你还没有给别人写过')
   }
 }
 function itemCard(m){
   return `<div class="sheet item" onclick="openThread('${m.id}')">
     <div class="between"><span class="tag ${m.isAnonymous?'tag-anon':'tag-named'}">${m.isAnonymous?'匿名来信':'署名来信'}</span>
-    <span class="status ${m.reply?'done':''}">${m.reply?visLabel(m.reply.visibility):'待拆'}</span></div>
+    <span class="status ${m.reply?'done':''}">${m.reply?visLabel(m.reply.visibility):(m.later?'稍后回':(m.read?'已读 · 待回复':'未读'))}</span></div>
     <div class="q-hand lined" style="margin-top:8px">${m.content}</div>
     ${m.reply?`<div class="a-print" style="margin-top:8px">${m.reply.content}</div>`:''}</div>`
 }
@@ -363,6 +404,7 @@ function openThread(id){
   document.getElementById('threadBody').innerHTML = `<div class="sheet">
     <span class="tag ${m.isAnonymous?'tag-anon':'tag-named'}">${m.isAnonymous?'匿名提问':'署名提问'}</span>
     <div class="q-hand lined" style="margin:12px 0">${m.content}</div>
+    <div class="muted">${owner ? (m.read?'已读':'未读') : letterStatus(m)}</div>
     ${m.reply?`<div class="muted">回复 · ${visLabel(m.reply.visibility)}</div><div class="a-print">${m.reply.content}</div>
       <button class="btn primary" style="margin-top:12px" onclick="openShare(${b.code},{q:\`${m.content.replace(/`/g,'')}\`,a:\`${m.reply.content.replace(/`/g,'')}\`})">生成问答海报</button>`:''}
   </div>
@@ -373,6 +415,7 @@ function openThread(id){
       <button class="${vis==='everyone'?'on named':''}" onclick="vis='everyone';openThread('${id}')">给友人看</button>
     </div>
     <button class="btn primary" onclick="reply('${id}')">回这封信</button>
+    <button class="btn ghost" style="margin-top:8px" onclick="mLater('${id}')">${m.later?'移回未答':'稍后回'}</button>
     <button class="btn ghost" style="margin-top:8px" onclick="mArchive('${id}')">归档</button>
   </div>` : (owner ? `<button class="btn ghost" onclick="mArchive('${id}')">归档</button>` : '')}`
   show('thread')
@@ -382,7 +425,17 @@ function reply(id){
   const content = document.getElementById('rep').value.trim()
   if (!content) return alert('请填写回复')
   m.reply = { content, createdAt: now(), visibility: vis }
+  m.read = true; m.later = false
+  const asker = user(m.fromId)
+  if (asker && asker.notifyReply) {
+    db.notices = db.notices || []
+    db.notices.unshift({ id: uid('nt'), userId: asker.id, type:'reply', read:false })
+  }
   save(db); alert('已回复'); openThread(id)
+}
+function mLater(id){
+  const m = db.messages.find(x => x.id===id)
+  m.later = !m.later; if (m.later) m.read = true; save(db); show('inbox')
 }
 function mArchive(id){
   db.messages.find(x => x.id===id).archived = true; save(db); show('inbox')

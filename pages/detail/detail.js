@@ -67,6 +67,21 @@ Page({
     }
   },
 
+  async toggleLater() {
+    try {
+      const later = !this.data.message.later
+      await call('markLater', { messageId: this.data.id, later })
+      wx.showToast({ title: later ? '已放到稍后' : '已移回未答' })
+      if (later) {
+        setTimeout(() => wx.navigateBack(), 400)
+      } else {
+        this.refresh()
+      }
+    } catch (err) {
+      wx.showToast({ title: err.message || '失败', icon: 'none' })
+    }
+  },
+
   async archive() {
     try {
       await call('archiveMessage', { messageId: this.data.id })
@@ -103,5 +118,15 @@ Page({
     this.setData({ showPoster: false })
   },
 
-  noop() {}
+  noop() {},
+
+  onShareAppMessage() {
+    const box = this.data.mailbox || {}
+    return {
+      title: box.topic
+        ? `这周想被问：${box.topic} · 信箱 #${box.code}`
+        : `来#${box.code}信箱匿名提问`,
+      path: `/pages/mailbox/mailbox?code=${box.code}`
+    }
+  }
 })

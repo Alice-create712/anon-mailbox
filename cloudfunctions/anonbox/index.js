@@ -4,6 +4,9 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+const TMPL_NEW_LETTER = ''
+const TMPL_NEW_REPLY = ''
+
 function hashPhone(phone) {
   const raw = String(phone || '').replace(/\s+/g, '')
   let h = 5381
@@ -27,6 +30,12 @@ function publicUser(user, reveal) {
   }
 }
 
+function replyVisibility(reply) {
+  if (!reply) return null
+  if (reply.visibility) return reply.visibility
+  return reply.public ? 'everyone' : 'private'
+}
+
 async function getUser(openid) {
   const res = await db.collection('users').where({ _openid: openid }).limit(1).get()
   return res.data[0] || null
@@ -40,6 +49,9 @@ async function ensureUser(openid, patch) {
       avatarUrl: (patch && patch.avatarUrl) || '',
       phoneHash: '',
       mailboxCode: null,
+      recentCodes: [],
+      notifyLetter: false,
+      notifyReply: false,
       createdAt: Date.now()
     }
     await db.collection('users').add({ data: doc })
@@ -77,6 +89,7 @@ async function getMailboxByCode(code) {
 }
 
 async function decorateMailbox(mailbox) {
+  if (!mailbox) return null
   const owner = await getUser(mailbox.ownerOpenid)
   return {
     code: mailbox.code,
@@ -84,7 +97,34 @@ async function decorateMailbox(mailbox) {
     intro: mailbox.intro,
     createdAt: mailbox.createdAt,
     messageCount: mailbox.messageCount || 0,
+    paused: !!mailbox.paused,
+    mutedWords: mailbox.mutedWords || [],
+    topic: mailbox.topic || '',
     ownerName: owner ? owner.nickname : '信箱主人'
+  }
+}
+
+async function rememberMailbox(user, code) {
+  const n = Number(code)
+  if (!user || !n) return
+  const recent = [n, ...(user.recentCodes || []).filter((c) => Number(c) !== n)].slice(0, 8)
+  await db.collection('users').doc(user._id).update({ data: { recentCodes: recent } })
+}
+
+async function sendSubscribe(openid, templateId, page, phrase, extra) {
+  if (!openid || !templateId) return
+  try {
+    await cloud.openapi.subscribeMessage.send({
+      touser: openid,
+      templateId,
+      page,
+      data: {
+        thing1: { value: phrase.slice(0, 20) },
+        thing2: { value: String(extra || '打开信封查看').slice(0, 20) }
+      }
+    })
+  } catch (e) {
+    /* 模板字段需在公众平台与此处对齐 */
   }
 }
 
@@ -140,7 +180,10 @@ async function handle(action, event, openid) {
         title: (event.title || `${user.nickname}的信箱`).slice(0, 20),
         intro: (event.intro || '欢迎匿名提问，我会认真看。').slice(0, 80),
         createdAt: Date.now(),
-        messageCount: 0
+        messageCount: 0,
+        paused: false,
+        mutedWords: [],
+        topic: ''
       }
       await db.collection('mailboxes').add({ data: mailbox })
       await db.collection('users').doc(user._id).update({ data: { mailboxCode: next } })
@@ -149,26 +192,49 @@ async function handle(action, event, openid) {
     case 'getHome': {
       const user = await ensureUser(openid)
       const mine = user.mailboxCode ? await getMailboxByCode(user.mailboxCode) : null
-      const latestRes = await db.collection('mailboxes').orderBy('code', 'desc').limit(8).get()
-      const latest = []
-      for (const m of latestRes.data) latest.push(await decorateMailbox(m))
+      const recent = []
+      for (const code of user.recentCodes || []) {
+        const box = await getMailboxByCode(code)
+        if (box && box.ownerOpenid !== openid) recent.push(await decorateMailbox(box))
+      }
+      let unreadCount = 0
+      if (mine) {
+        const unreadRes = await db.collection('messages').where({
+          mailboxCode: Number(mine.code),
+          read: false
+        }).count()
+        unreadCount = unreadRes.total || 0
+      }
       return {
         user: publicUser(user, true),
         mailbox: mine ? await decorateMailbox(mine) : null,
-        latest
+        recent,
+        unreadCount,
+        replyNotice: 0,
+        notifyLetter: !!user.notifyLetter
       }
     }
-    case 'searchMailbox':
+    case 'searchMailbox': {
+      const box = await getMailboxByCode(event.code)
+      if (!box) throw new Error('没有找到这个信箱')
+      return { mailbox: await decorateMailbox(box) }
+    }
     case 'getMailbox': {
       const box = await getMailboxByCode(event.code)
       if (!box) throw new Error('没有找到这个信箱')
-      if (action === 'searchMailbox') return { mailbox: await decorateMailbox(box) }
+      const user = await ensureUser(openid)
+      await rememberMailbox(user, box.code)
       const isOwner = box.ownerOpenid === openid
       const msgRes = await db.collection('messages').where({ mailboxCode: Number(box.code) }).orderBy('createdAt', 'desc').get()
       const messages = []
       for (const m of msgRes.data) {
+        if (m.archived) continue
         const item = await serializeMessage(m, openid, isOwner)
-        if (isOwner || item.reply) messages.push(item)
+        if (!item.reply) continue
+        const vis = item.reply.visibility
+        if (vis === 'mailbox' || vis === 'everyone' || (item.isMine && vis === 'private')) {
+          messages.push(item)
+        }
       }
       return { mailbox: await decorateMailbox(box), isOwner, messages }
     }
@@ -179,6 +245,9 @@ async function handle(action, event, openid) {
       const box = await getMailboxByCode(event.mailboxCode)
       if (!box) throw new Error('信箱不存在')
       if (box.ownerOpenid === openid) throw new Error('不能给自己的信箱留言')
+      if (box.paused) throw new Error('这个信箱暂时不接收新留言')
+      const muted = box.mutedWords || []
+      if (muted.some((w) => text.includes(w))) throw new Error('这句话里有信箱主人不想看到的词')
       await db.collection('messages').add({
         data: {
           mailboxCode: Number(box.code),
@@ -186,10 +255,17 @@ async function handle(action, event, openid) {
           isAnonymous: event.isAnonymous !== false,
           content: text,
           createdAt: Date.now(),
+          archived: false,
+          later: false,
+          read: false,
           reply: null
         }
       })
       await db.collection('mailboxes').doc(box._id).update({ data: { messageCount: _.inc(1) } })
+      const owner = await getUser(box.ownerOpenid)
+      if (owner && owner.notifyLetter) {
+        await sendSubscribe(box.ownerOpenid, TMPL_NEW_LETTER, 'pages/inbox/inbox', '信封里有新来信', `#${box.code}`)
+      }
       return {}
     }
     case 'getInbox': {
@@ -199,7 +275,12 @@ async function handle(action, event, openid) {
         : { data: [] }
       const sentRes = await db.collection('messages').where({ fromOpenid: openid }).orderBy('createdAt', 'desc').get()
       const received = []
-      for (const m of receivedRes.data) received.push(await serializeMessage(m, openid, true))
+      for (const m of receivedRes.data) {
+        if (m.archived) continue
+        received.push(await serializeMessage(m, openid, true))
+      }
+      const unanswered = received.filter((m) => !m.reply && !m.later)
+      const later = received.filter((m) => !m.reply && m.later)
       const sent = []
       for (const m of sentRes.data) {
         const item = await serializeMessage(m, openid, false)
@@ -207,18 +288,26 @@ async function handle(action, event, openid) {
         item.mailbox = box ? await decorateMailbox(box) : null
         sent.push(item)
       }
-      return { received, sent, mailboxCode: user.mailboxCode }
+      const box = user.mailboxCode ? await getMailboxByCode(user.mailboxCode) : null
+      return {
+        received,
+        unanswered,
+        later,
+        sent,
+        unreadCount: unanswered.filter((m) => !m.read).length,
+        mailboxCode: user.mailboxCode,
+        paused: !!(box && box.paused)
+      }
     }
     case 'getThread': {
-      const msg = await db.collection('messages').doc(event.messageId).get()
-      const message = msg.data
-      const box = await getMailboxByCode(message.mailboxCode)
+      const msg = (await db.collection('messages').doc(event.messageId).get()).data
+      const box = await getMailboxByCode(msg.mailboxCode)
       const isOwner = box.ownerOpenid === openid
-      if (!isOwner && message.fromOpenid !== openid) throw new Error('无权查看')
+      if (!isOwner && msg.fromOpenid !== openid) throw new Error('无权查看')
       return {
         mailbox: await decorateMailbox(box),
         isOwner,
-        message: await serializeMessage(message, openid, isOwner)
+        message: await serializeMessage(msg, openid, isOwner)
       }
     }
     case 'replyMessage': {
@@ -228,9 +317,10 @@ async function handle(action, event, openid) {
       const msg = (await db.collection('messages').doc(event.messageId).get()).data
       const box = await getMailboxByCode(msg.mailboxCode)
       if (box.ownerOpenid !== openid) throw new Error('只能回复自己信箱里的留言')
-      const reply = { content: text, createdAt: Date.now(), public: !!event.makePublic }
-      await db.collection('messages').doc(event.messageId).update({ data: { reply } })
-      if (event.makePublic) {
+      const vis = ['private', 'mailbox', 'everyone'].includes(event.visibility) ? event.visibility : 'private'
+      const reply = { content: text, createdAt: Date.now(), visibility: vis }
+      await db.collection('messages').doc(event.messageId).update({ data: { reply, read: true, later: false } })
+      if (vis === 'everyone') {
         await db.collection('posts').add({
           data: {
             authorOpenid: openid,
@@ -240,6 +330,10 @@ async function handle(action, event, openid) {
             createdAt: Date.now()
           }
         })
+      }
+      const asker = await getUser(msg.fromOpenid)
+      if (asker && asker.notifyReply) {
+        await sendSubscribe(msg.fromOpenid, TMPL_NEW_REPLY, `pages/detail/detail?id=${event.messageId}`, '有人回复了你', `#${box.code}`)
       }
       return {}
     }
@@ -260,9 +354,29 @@ async function handle(action, event, openid) {
       return {}
     }
     case 'getFeed': {
-      const postRes = await db.collection('posts').orderBy('createdAt', 'desc').limit(50).get()
+      const user = await ensureUser(openid)
+      const followRes = await db.collection('follows').where({ userOpenid: openid }).get()
+      const codes = new Set(followRes.data.map((f) => Number(f.mailboxCode)))
+      if (user.mailboxCode) codes.add(Number(user.mailboxCode))
+      const msgRes = await db.collection('messages').orderBy('createdAt', 'desc').limit(80).get()
       const posts = []
-      for (const p of postRes.data) posts.push(await serializePost(p, openid))
+      for (const m of msgRes.data) {
+        if (!m.reply || m.archived) continue
+        const vis = replyVisibility(m.reply)
+        if (vis !== 'mailbox' && vis !== 'everyone') continue
+        if (!codes.has(Number(m.mailboxCode))) continue
+        const box = await getMailboxByCode(m.mailboxCode)
+        posts.push({
+          id: m._id,
+          type: 'qna',
+          mailboxCode: m.mailboxCode,
+          mailboxTitle: box ? box.title : '',
+          question: m.content,
+          answer: m.reply.content,
+          createdAt: m.reply.createdAt,
+          visibility: vis
+        })
+      }
       return { posts }
     }
     case 'addComment': {
@@ -323,6 +437,65 @@ async function handle(action, event, openid) {
         bound: !!user.phoneHash
       }
     }
+    case 'updateMailbox': {
+      const user = await ensureUser(openid)
+      if (!user.mailboxCode) throw new Error('还没有信箱')
+      const box = await getMailboxByCode(user.mailboxCode)
+      const data = {}
+      if (typeof event.paused === 'boolean') data.paused = event.paused
+      if (Array.isArray(event.mutedWords)) {
+        data.mutedWords = event.mutedWords.map((w) => String(w).trim()).filter(Boolean).slice(0, 20)
+      }
+      if (typeof event.topic === 'string') data.topic = event.topic.slice(0, 40)
+      if (Object.keys(data).length) await db.collection('mailboxes').doc(box._id).update({ data })
+      return { mailbox: await decorateMailbox(await getMailboxByCode(user.mailboxCode)) }
+    }
+    case 'archiveMessage':
+    case 'markRead':
+    case 'markLater': {
+      const msg = (await db.collection('messages').doc(event.messageId).get()).data
+      const box = await getMailboxByCode(msg.mailboxCode)
+      if (!box || box.ownerOpenid !== openid) throw new Error('只能整理自己信箱里的留言')
+      const data = {}
+      if (action === 'archiveMessage') data.archived = true
+      if (action === 'markRead') data.read = true
+      if (action === 'markLater') {
+        data.later = event.later !== false
+        if (data.later) data.read = true
+      }
+      await db.collection('messages').doc(event.messageId).update({ data })
+      return {}
+    }
+    case 'reportMessage': {
+      await db.collection('reports').add({
+        data: { messageId: event.messageId, fromOpenid: openid, createdAt: Date.now() }
+      })
+      return {}
+    }
+    case 'followMailbox': {
+      const box = await getMailboxByCode(event.code)
+      if (!box) throw new Error('信箱不存在')
+      const exists = await db.collection('follows').where({
+        userOpenid: openid,
+        mailboxCode: Number(event.code)
+      }).count()
+      if (!exists.total) {
+        await db.collection('follows').add({
+          data: { userOpenid: openid, mailboxCode: Number(event.code), createdAt: Date.now() }
+        })
+      }
+      return handle('getFriends', event, openid)
+    }
+    case 'enableNotify': {
+      const user = await ensureUser(openid)
+      const data = {}
+      if (event.letter) data.notifyLetter = true
+      if (event.reply) data.notifyReply = true
+      if (Object.keys(data).length) await db.collection('users').doc(user._id).update({ data })
+      return {}
+    }
+    case 'getNotices':
+      return { notices: [] }
     default:
       throw new Error('未知操作')
   }
@@ -331,6 +504,9 @@ async function handle(action, event, openid) {
 async function serializeMessage(message, viewerOpenid, isOwner) {
   const from = await getUser(message.fromOpenid)
   const reveal = !message.isAnonymous
+  const reply = message.reply
+    ? { ...message.reply, visibility: replyVisibility(message.reply) }
+    : null
   return {
     id: message._id,
     mailboxCode: message.mailboxCode,
@@ -339,7 +515,11 @@ async function serializeMessage(message, viewerOpenid, isOwner) {
     isAnonymous: message.isAnonymous,
     from: publicUser(from, reveal || message.fromOpenid === viewerOpenid),
     isMine: message.fromOpenid === viewerOpenid,
-    reply: message.reply || null
+    archived: !!message.archived,
+    later: !!message.later,
+    read: !!message.read,
+    statusText: reply ? '对方已回复' : (message.read ? '对方已读' : '已送达'),
+    reply
   }
 }
 

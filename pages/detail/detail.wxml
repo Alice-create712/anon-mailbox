@@ -5,7 +5,7 @@
       {{message.isAnonymous ? '匿名提问' : '署名提问'}}
     </view>
     <view class="q-hand lined q">{{message.content}}</view>
-    <view class="muted tiny">{{message.timeText}} · {{message.isAnonymous ? '身份已隐藏' : message.from.nickname}}</view>
+    <view class="muted tiny">{{message.timeText}} · {{message.isAnonymous ? '身份已隐藏' : message.from.nickname}} · {{isOwner ? (message.read ? '已读' : '未读') : message.statusText}}</view>
     <view class="reply" wx:if="{{message.reply}}">
       <view class="muted tiny">回复 · {{message.visText}}</view>
       <view class="a-print">{{message.reply.content}}</view>
@@ -20,6 +20,7 @@
       <view class="chip {{visibility === 'everyone' ? 'on named' : ''}}" data-vis="everyone" bindtap="setVis">公开到好友动态</view>
     </view>
     <view class="btn-primary" bindtap="sendReply">回复对方</view>
+    <view class="btn-ghost" bindtap="toggleLater">{{message.later ? '移回未答' : '稍后回'}}</view>
   </view>
 
   <view class="btn-primary" wx:if="{{message.reply}}" bindtap="openPoster">生成问答海报</view>

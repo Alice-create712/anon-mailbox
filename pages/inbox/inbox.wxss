@@ -21,7 +21,7 @@
   border-radius: 16rpx;
   color: #8a8174;
   font-weight: 600;
-  font-size: 24rpx;
+  font-size: 22rpx;
 }
 
 .tab.on {

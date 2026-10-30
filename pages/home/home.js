@@ -1,13 +1,16 @@
 const { call } = require('../../utils/api')
 const { PROMPTS } = require('../../utils/prompts')
+const { enableLetterNotify } = require('../../utils/notify')
 
 Page({
   data: {
     user: null,
     mailbox: null,
-    latest: [],
+    recent: [],
     keyword: '',
     unreadCount: 0,
+    replyNotice: 0,
+    notifyLetter: false,
     slips: PROMPTS
   },
 
@@ -29,9 +32,14 @@ Page({
       this.setData({
         user: res.user,
         mailbox: res.mailbox,
-        latest: res.latest || [],
-        unreadCount: res.unreadCount || 0
+        recent: res.recent || [],
+        unreadCount: res.unreadCount || 0,
+        replyNotice: res.replyNotice || 0,
+        notifyLetter: !!res.notifyLetter
       })
+      if (res.replyNotice) {
+        call('getNotices').catch(() => {})
+      }
     } catch (err) {
       if (err.code !== 'UNAUTH' && err.message !== '请先登录') {
         wx.showToast({ title: err.message || '加载失败', icon: 'none' })
@@ -68,6 +76,16 @@ Page({
     }
   },
 
+  async askNotify() {
+    try {
+      await enableLetterNotify()
+      this.setData({ notifyLetter: true })
+      wx.showToast({ title: '来信时会提醒你', icon: 'none' })
+    } catch (err) {
+      wx.showToast({ title: err.message || '先在微信里允许提醒', icon: 'none' })
+    }
+  },
+
   goCreate() {
     wx.navigateTo({ url: '/pages/create/create' })
   },
@@ -94,7 +112,9 @@ Page({
     const box = this.data.mailbox
     if (box) {
       return {
-        title: `来我的信箱 #${box.code} 匿名提问`,
+        title: box.topic
+          ? `这周想被问：${box.topic} · 信箱 #${box.code}`
+          : `来我的信箱 #${box.code} 匿名提问`,
         path: `/pages/mailbox/mailbox?code=${box.code}`
       }
     }

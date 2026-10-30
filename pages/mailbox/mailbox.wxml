@@ -4,13 +4,14 @@
     <view class="stamp">邮戳 #{{mailbox.code}}</view>
     <view class="title">{{mailbox.title}}</view>
     <view class="welcome">{{mailbox.intro}}</view>
-    <view class="topic" wx:if="{{mailbox.topic}}">今日主题 · {{mailbox.topic}}</view>
+    <view class="topic" wx:if="{{mailbox.topic}}">本周想被问 · {{mailbox.topic}}</view>
     <button class="ghost-link" open-type="share">把这只信封发给朋友</button>
   </view>
 
   <block wx:if="{{!isOwner}}">
     <view class="paused" wx:if="{{mailbox.paused}}">这只信箱暂时封口了。</view>
     <block wx:else>
+      <view class="topic-card lined" wx:if="{{mailbox.topic}}" bindtap="useTopic">{{mailbox.topic}}</view>
       <view class="slips">
         <view class="slip" wx:for="{{slips}}" wx:key="*this" data-text="{{item}}" bindtap="pickSlip">{{item}}</view>
       </view>
@@ -37,6 +38,10 @@
   </view>
   <view class="settings" wx:if="{{isOwner && showSettings}}">
     <view class="btn-ghost" bindtap="togglePause">{{mailbox.paused ? '重新打开' : '暂停接收'}}</view>
+    <view class="mute-row">
+      <input class="mute-input" placeholder="本周想被问的一句" value="{{topicInput}}" bindinput="onTopic" maxlength="40" />
+      <view class="mute-add" bindtap="saveTopic">贴上</view>
+    </view>
     <view class="mute-row">
       <input class="mute-input" placeholder="屏蔽词" value="{{muteInput}}" bindinput="onMute" />
       <view class="mute-add" bindtap="addMute">添加</view>

@@ -10,8 +10,10 @@
       <view class="wax {{unreadCount ? 'pulse' : ''}}">{{unreadCount ? unreadCount : '匿'}}</view>
       <view class="stamp">邮戳 #{{mailbox.code}}</view>
       <view class="env-title">{{mailbox.title}}</view>
+      <view class="topic-line" wx:if="{{mailbox.topic}}">本周想被问 · {{mailbox.topic}}</view>
       <view class="muted tiny">{{mailbox.paused ? '已封口，暂停接收' : '未拆的信，写给愿意看的人'}}</view>
       <button class="btn-primary share-btn" open-type="share">把信封发给朋友</button>
+      <view class="notify-line" bindtap="askNotify">{{notifyLetter ? '来信提醒已打开' : '来信时提醒我'}}</view>
       <view class="env-actions">
         <text bindtap="goMine">拆开信箱</text>
         <text bindtap="copyCode">复制邮戳</text>
@@ -30,9 +32,17 @@
   </view>
 
   <view class="floor">
+    <view class="floor-title" wx:if="{{replyNotice}}">有人回了你发出的信，去「来信 · 发出」拆开。</view>
     <view class="floor-title">可以这样问进别人的信封</view>
     <view class="slips">
       <view class="slip" wx:for="{{slips}}" wx:key="*this" data-text="{{item}}" bindtap="copySlip">{{item}}</view>
+    </view>
+    <view class="floor-title" wx:if="{{recent.length}}">最近拆过的信封</view>
+    <view class="recent" wx:if="{{recent.length}}">
+      <view class="recent-item" wx:for="{{recent}}" wx:key="code" data-code="{{item.code}}" bindtap="goBox">
+        <view class="stamp mini-stamp">#{{item.code}}</view>
+        <view class="recent-title">{{item.title}}</view>
+      </view>
     </view>
     <view class="find-strip lined">
       <view class="find-label">找一只信箱</view>

@@ -1,6 +1,7 @@
 const { call } = require('../../utils/api')
 const { formatRelative } = require('../../utils/util')
 const { PROMPTS, randomPrompt } = require('../../utils/prompts')
+const { enableReplyNotify } = require('../../utils/notify')
 
 Page({
   data: {
@@ -14,7 +15,8 @@ Page({
     prompt: '',
     slips: PROMPTS,
     showSettings: false,
-    muteInput: ''
+    muteInput: '',
+    topicInput: ''
   },
 
   onLoad(query) {
@@ -34,6 +36,7 @@ Page({
       wx.setNavigationBarTitle({ title: `#${res.mailbox.code} ${res.mailbox.title}` })
       this.setData({
         mailbox: res.mailbox,
+        topicInput: res.mailbox.topic || '',
         isOwner: res.isOwner,
         messages: (res.messages || []).map((m) => ({
           ...m,
@@ -58,6 +61,26 @@ Page({
     this.setData({ content: e.currentTarget.dataset.text })
   },
 
+  useTopic() {
+    if (this.data.mailbox && this.data.mailbox.topic) {
+      this.setData({ content: this.data.mailbox.topic })
+    }
+  },
+
+  onTopic(e) {
+    this.setData({ topicInput: e.detail.value })
+  },
+
+  async saveTopic() {
+    try {
+      const res = await call('updateMailbox', { topic: this.data.topicInput.trim() })
+      this.setData({ mailbox: res.mailbox })
+      wx.showToast({ title: res.mailbox.topic ? '已贴上本周问题' : '已揭下' })
+    } catch (err) {
+      wx.showToast({ title: err.message || '保存失败', icon: 'none' })
+    }
+  },
+
   toggleSettings() {
     this.setData({ showSettings: !this.data.showSettings })
   },
@@ -77,6 +100,7 @@ Page({
       })
       this.setData({ content: '' })
       wx.showToast({ title: this.data.isAnonymous ? '已匿名送达' : '已署名送达' })
+      enableReplyNotify().catch(() => {})
       this.refresh()
     } catch (err) {
       wx.showToast({ title: err.message || '发送失败', icon: 'none' })
@@ -128,7 +152,9 @@ Page({
   onShareAppMessage() {
     const box = this.data.mailbox || {}
     return {
-      title: `来#${box.code}信箱匿名提问`,
+      title: box.topic
+        ? `这周想被问：${box.topic} · #${box.code}`
+        : `来#${box.code}信箱匿名提问`,
       path: `/pages/mailbox/mailbox?code=${box.code}`
     }
   }

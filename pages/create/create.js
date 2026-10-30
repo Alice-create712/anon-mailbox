@@ -1,4 +1,5 @@
 const { call } = require('../../utils/api')
+const { enableLetterNotify } = require('../../utils/notify')
 
 Page({
   data: {
@@ -22,6 +23,7 @@ Page({
         intro: this.data.intro.trim()
       })
       wx.hideLoading()
+      enableLetterNotify().catch(() => {})
       wx.showToast({ title: `你的编号是 ${res.mailbox.code}` })
       setTimeout(() => {
         wx.navigateBack({

@@ -21,10 +21,11 @@
 
 1. 在[微信公众平台](https://mp.weixin.qq.com/)注册小程序，类目建议选「社交 — 社区/论坛」或「工具 — 信息查询」，以审核当期类目为准。
 2. 填写 AppID，开通**微信云开发**，新建环境后把环境 ID 填进 `app.js` 的 `globalData.cloudEnv`（填了才会走云函数）。
-3. 在云开发控制台创建集合：`users`、`mailboxes`、`messages`、`posts`、`comments`、`contacts`、`counters`。权限先用「仅创建者可读写」，云函数用管理员权限访问。
-4. 上传并部署云函数 `cloudfunctions/anonbox`。
-5. 后台配置用户隐私保护指引：昵称、头像、手机号（选填，用于好友匹配）、通讯录（仅用户主动选择联系人）。协议页已写在 `pages/legal`。
-6. 准备 15 秒操作录屏：登录 → 发布信箱 → 按编号查找 → 匿名留言 → 收件箱回复 → Everyone 发匿名动态。
-7. 提交审核前在真机预览通讯录能力；模拟器里 `wx.chooseContact` 往往不可用，已保留手动输入号码作为开发兜底。
+3. 在云开发控制台创建集合：`users`、`mailboxes`、`messages`、`posts`、`comments`、`contacts`、`follows`、`reports`、`counters`。权限先用「仅创建者可读写」，云函数用管理员权限访问。
+4. 公众平台开通订阅消息，建两个模板（新来信、提问被回复）。把模板 ID 填进 `app.js` 的 `globalData.subscribe`，以及云函数 `cloudfunctions/anonbox/index.js` 顶部的 `TMPL_NEW_LETTER` / `TMPL_NEW_REPLY`。字段需与云函数里的 `thing1`、`thing2` 对齐，或按你的模板改发送字段。
+5. 上传并部署云函数 `cloudfunctions/anonbox`。
+6. 后台配置用户隐私保护指引：昵称、头像、手机号（选填，用于好友匹配）、通讯录（仅用户主动选择联系人）。协议页已写在 `pages/legal`。
+7. 准备 15 秒操作录屏：登录 → 发布信箱 → 按编号查找 → 匿名留言 → 收件箱回复 → Everyone 发匿名动态。
+8. 提交审核前在真机预览通讯录能力；模拟器里 `wx.chooseContact` 往往不可用，已保留手动输入号码作为开发兜底。
 
 未填写 `cloudEnv` 时，小程序仍可完整演示，但换设备、清缓存后本地数据会丢失，不适合正式上架。

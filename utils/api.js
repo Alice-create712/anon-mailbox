@@ -70,7 +70,10 @@ function localCall(action, data) {
     archiveMessage,
     reportMessage,
     followMailbox,
-    markRead
+    markRead,
+    markLater,
+    enableNotify,
+    getNotices
   }
   const fn = map[action]
   if (!fn) throw new Error(`未知操作 ${action}`)
@@ -89,6 +92,9 @@ function login({ nickname, avatarUrl }) {
       avatarUrl: avatarUrl || '',
       phoneHash: '',
       mailboxCode: null,
+      recentCodes: [],
+      notifyLetter: false,
+      notifyReply: false,
       createdAt: now()
     }
     save((d) => {
@@ -162,21 +168,50 @@ function dbMailbox(db, code) {
   return db.mailboxes.find((m) => Number(m.code) === Number(code)) || null
 }
 
+function rememberMailbox(d, userId, code) {
+  const u = userById(d, userId)
+  if (!u) return
+  const n = Number(code)
+  if (!n) return
+  u.recentCodes = [n, ...(u.recentCodes || []).filter((c) => Number(c) !== n)].slice(0, 8)
+}
+
+function pushNotice(d, { userId, type, title, body, page }) {
+  d.notices = d.notices || []
+  d.notices.unshift({
+    id: uid('nt'),
+    userId,
+    type,
+    title,
+    body,
+    page,
+    createdAt: now(),
+    read: false
+  })
+}
+
 function getHome() {
   const id = requireUser()
   const db = load()
   const me = userById(db, id)
   const mine = me.mailboxCode ? dbMailbox(db, me.mailboxCode) : null
-  const latest = [...db.mailboxes].sort((a, b) => b.code - a.code).slice(0, 8).map((m) => decorateMailbox(db, m))
+  const recent = (me.recentCodes || [])
+    .map((code) => dbMailbox(db, code))
+    .filter(Boolean)
+    .filter((m) => m.ownerId !== id)
+    .map((m) => decorateMailbox(db, m))
   const unreadCount = mine
     ? db.messages.filter((m) => Number(m.mailboxCode) === Number(mine.code) && !m.reply && !m.archived && !m.read).length
     : 0
+  const replyNotice = (db.notices || []).filter((n) => n.userId === id && n.type === 'reply' && !n.read).length
   return {
     ok: true,
     user: publicUser(me, true),
     mailbox: mine ? decorateMailbox(db, mine) : null,
-    latest,
-    unreadCount
+    recent,
+    unreadCount,
+    replyNotice,
+    notifyLetter: !!me.notifyLetter
   }
 }
 
@@ -211,6 +246,10 @@ function getMailbox({ code }) {
   const db = load()
   const mailbox = dbMailbox(db, code)
   if (!mailbox) throw new Error('信箱不存在')
+  save((d) => {
+    rememberMailbox(d, id, code)
+    return d
+  })
   const isOwner = mailbox.ownerId === id
   const messages = db.messages
     .filter((m) => Number(m.mailboxCode) === Number(mailbox.code) && !m.archived)
@@ -243,7 +282,9 @@ function serializeMessage(db, message, viewerId, isOwner) {
     from: publicUser(from, canSeeSender || message.fromId === viewerId),
     isMine: message.fromId === viewerId,
     archived: !!message.archived,
+    later: !!message.later,
     read: !!message.read,
+    statusText: message.reply ? '对方已回复' : (message.read ? '对方已读' : '已送达'),
     reply: message.reply
       ? { ...message.reply, visibility: replyVisibility(message.reply) }
       : null
@@ -273,11 +314,22 @@ function sendMessage({ mailboxCode, content, isAnonymous }) {
       content: text,
       createdAt: now(),
       archived: false,
+      later: false,
       read: false,
       reply: null
     })
     const box = dbMailbox(d, mailbox.code)
     box.messageCount = (box.messageCount || 0) + 1
+    const owner = userById(d, mailbox.ownerId)
+    if (owner && owner.notifyLetter) {
+      pushNotice(d, {
+        userId: owner.id,
+        type: 'letter',
+        title: '信封里有新来信',
+        body: `有人写进了 #${mailbox.code}`,
+        page: `/pages/inbox/inbox`
+      })
+    }
     return d
   })
   return { ok: true }
@@ -292,7 +344,9 @@ function getInbox() {
     .sort((a, b) => Number(!!a.reply) - Number(!!b.reply) || b.createdAt - a.createdAt)
     .map((m) => serializeMessage(db, m, id, true))
   const unreadCount = received.filter((m) => !m.reply && !m.read).length
-  const unanswered = received.filter((m) => !m.reply)
+  const open = received.filter((m) => !m.reply)
+  const unanswered = open.filter((m) => !m.later)
+  const later = open.filter((m) => m.later)
   const sent = db.messages
     .filter((m) => m.fromId === id)
     .sort((a, b) => b.createdAt - a.createdAt)
@@ -307,6 +361,7 @@ function getInbox() {
     ok: true,
     received,
     unanswered,
+    later,
     sent,
     unreadCount,
     mailboxCode: me.mailboxCode,
@@ -329,10 +384,21 @@ function replyMessage({ messageId, content, visibility }) {
   save((d) => {
     const msg = d.messages.find((m) => m.id === messageId)
     msg.read = true
+    msg.later = false
     msg.reply = {
       content: text,
       createdAt: now(),
       visibility: vis
+    }
+    const asker = userById(d, msg.fromId)
+    if (asker && asker.notifyReply) {
+      pushNotice(d, {
+        userId: asker.id,
+        type: 'reply',
+        title: '有人回复了你',
+        body: `来自信箱 #${box.code}`,
+        page: `/pages/detail/detail?id=${msg.id}`
+      })
     }
     if (vis === 'everyone') {
       d.posts.unshift({
@@ -538,7 +604,7 @@ function updateMailbox({ paused, mutedWords, topic }) {
     const box = dbMailbox(d, me.mailboxCode)
     if (typeof paused === 'boolean') box.paused = paused
     if (Array.isArray(mutedWords)) box.mutedWords = mutedWords.map((w) => String(w).trim()).filter(Boolean).slice(0, 20)
-    if (typeof topic === 'string') box.topic = topic.slice(0, 30)
+    if (typeof topic === 'string') box.topic = topic.slice(0, 40)
     return d
   })
   const fresh = load()
@@ -593,6 +659,44 @@ function markRead({ messageId }) {
     return d
   })
   return { ok: true }
+}
+
+function markLater({ messageId, later }) {
+  const id = requireUser()
+  save((d) => {
+    const msg = d.messages.find((m) => m.id === messageId)
+    if (!msg) throw new Error('留言不存在')
+    const box = dbMailbox(d, msg.mailboxCode)
+    if (!box || box.ownerId !== id) throw new Error('只能整理自己信箱里的留言')
+    msg.later = later !== false
+    if (msg.later) msg.read = true
+    return d
+  })
+  return { ok: true }
+}
+
+function enableNotify({ letter, reply }) {
+  const id = requireUser()
+  save((d) => {
+    const u = userById(d, id)
+    if (letter) u.notifyLetter = true
+    if (reply) u.notifyReply = true
+    return d
+  })
+  return { ok: true }
+}
+
+function getNotices() {
+  const id = requireUser()
+  const db = load()
+  const list = (db.notices || []).filter((n) => n.userId === id).slice(0, 20)
+  save((d) => {
+    ;(d.notices || []).forEach((n) => {
+      if (n.userId === id) n.read = true
+    })
+    return d
+  })
+  return { ok: true, notices: list }
 }
 
 module.exports = {
